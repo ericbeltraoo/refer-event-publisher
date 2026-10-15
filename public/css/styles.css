@@ -1,0 +1,404 @@
+/* Estilos Gerais do Formulário */
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 30px; background-color: #f3f6fa; color: #1d2939; }
+    .card { background: #ffffff; padding: 30px; border-radius: 12px; max-width: 750px; margin: 0 auto; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
+    h2 { margin-top: 0; color: #011B4C; border-bottom: 2px solid #3B74A6; padding-bottom: 10px; font-size: 1.5rem; }
+    .form-group { margin-bottom: 18px; }
+    .form-row { display: flex; gap: 16px; }
+    .form-row .form-group { flex: 1; }
+    label { display: block; font-weight: 600; margin-bottom: 6px; color: #1d2939; font-size: 0.9rem; }
+    label .req { color: #d9383a; }
+    input[type="text"], input[type="date"], input[type="time"], input[type="url"], select {
+      width: 100%; padding: 10px 12px; border: 1px solid #d8e0ea; border-radius: 6px; box-sizing: border-box; font-size: 0.95rem; color: #1d2939; background: #fff;
+    }
+    input:focus, select:focus { border-color: #3B74A6; outline: none; box-shadow: 0 0 0 3px rgba(59,116,166,0.15); }
+    .description-text { font-size: 0.8rem; color: #667085; margin-top: 4px; display: block; }
+
+    /* =========================================
+       CLONE DO EDITOR DO TEAMS (MODO ESCURO)
+       ========================================= */
+    .teams-editor {
+      border: 1px solid #d8e0ea; border-radius: 6px; background-color: #ffffff; display: flex; flex-direction: column; overflow: visible; font-family: 'Segoe UI', sans-serif; position: relative; transition: background-color 0.3s;
+    }
+    .teams-editor.dark-mode { background-color: #242424; border-color: #444; }
+    
+    .te-attachment-area { padding: 14px 8px 0; }
+    .te-attachment-area[hidden] { display: none; }
+    .te-attachments { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 12px; }
+    .te-attachment-separator { margin-top: 14px; border-top: 1px solid #d0d0d0; }
+    .teams-editor.dark-mode .te-attachment-separator { border-top-color: #444; }
+
+    /* Área de Texto */
+    .te-content {
+      padding: 16px 16px 24px 16px; min-height: 120px; min-width: 0; outline: none; line-height: 1.5; font-size: 0.95rem; color: #242424; overflow-wrap: anywhere;
+    }
+    .teams-editor.dark-mode .te-content { color: #ffffff; }
+    
+    /* Texto de orientação exibido quando o editor está vazio */
+    .te-content:empty:before {
+      content: attr(data-placeholder); color: #8a8a8a; pointer-events: none;
+    }
+
+    /* Barras de Ferramentas */
+    .te-format-bar, .te-bottom-bar { display: flex; align-items: center; padding: 6px 12px; gap: 2px; }
+    
+    .te-format-bar { background-color: #f5f5f5; border-top: 1px solid #e0e0e0; display: none; flex-wrap: wrap; }
+    .teams-editor.dark-mode .te-format-bar { background-color: #1a1a1a; border-top-color: #333; }
+    
+    .te-bottom-bar { background-color: #ffffff; border-top: 1px solid #e0e0e0; border-bottom-left-radius: 6px; border-bottom-right-radius: 6px; position: relative; }
+    .teams-editor.dark-mode .te-bottom-bar { background-color: #141414; border-top-color: #333; }
+
+    /* Botões da Toolbar */
+    .te-btn {
+      background: transparent; border: none; color: #444; height: 32px; min-width: 32px; padding: 0 6px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; font-family: inherit; transition: background 0.1s;
+    }
+    .te-btn .material-symbols-outlined { font-size: 20px; font-weight: 300; }
+    .te-btn:hover, .te-btn.active { background-color: #e0e0e0; color: #000; }
+    .teams-editor.dark-mode .te-btn { color: #d1d1d1; }
+    .teams-editor.dark-mode .te-btn:hover, .teams-editor.dark-mode .te-btn.active { background-color: #333; color: #fff; }
+    
+    .te-divider { width: 1px; height: 20px; background-color: #ccc; margin: 0 4px; }
+    .teams-editor.dark-mode .te-divider { background-color: #444; }
+
+    /* Estilo específico para o botão de Cor/Marcador */
+    .te-color-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; margin-top: 2px; }
+    .te-color-btn span:first-child { font-weight: bold; font-size: 14px; }
+    .te-color-bar { width: 12px; height: 3px; border-radius: 2px; margin-top: 1px; }
+
+    /* Dropdown de Anexos */
+    .te-attach-wrapper { position: relative; }
+    .te-attach-dropdown {
+      position: absolute; bottom: 100%; left: 0; margin-bottom: 8px; background: #fff; border: 1px solid #d8e0ea; border-radius: 6px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); display: none; flex-direction: column; padding: 8px 0; min-width: 250px; z-index: 100;
+    }
+    .teams-editor.dark-mode .te-attach-dropdown { background: #292929; border-color: #444; box-shadow: 0 4px 20px rgba(0,0,0,0.4); }
+    .te-dropdown-header { padding: 4px 16px 8px 16px; font-size: 0.8rem; color: #667085; font-weight: 600; }
+    .teams-editor.dark-mode .te-dropdown-header { color: #a1a1a1; }
+    .te-dropdown-item {
+      padding: 8px 16px; display: flex; align-items: center; gap: 12px; color: #242424; cursor: pointer; font-size: 0.9rem; border: none; background: transparent; width: 100%; text-align: left;
+    }
+    .te-dropdown-item:hover { background: #f0f0f0; }
+    .teams-editor.dark-mode .te-dropdown-item { color: #d1d1d1; }
+    .teams-editor.dark-mode .te-dropdown-item:hover { background: #3d3d3d; }
+
+    .te-picker-wrapper { position: relative; }
+    .te-emoji-menu {
+      position: absolute; bottom: 100%; left: 0; margin-bottom: 8px; width: 320px; max-height: 300px; overflow-y: auto;
+      background: #fff; border: 1px solid #d8e0ea; border-radius: 6px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      display: none; grid-template-columns: repeat(8, 1fr); gap: 2px; padding: 8px; z-index: 100;
+    }
+    .teams-editor.dark-mode .te-emoji-menu { background: #292929; border-color: #444; box-shadow: 0 4px 20px rgba(0,0,0,0.4); }
+    .te-emoji-item { border: 0; border-radius: 4px; background: transparent; cursor: pointer; font-size: 22px; padding: 4px; }
+    .te-emoji-item:hover { background: #f0f0f0; }
+    .teams-editor.dark-mode .te-emoji-item:hover { background: #3d3d3d; }
+
+    .te-image-attachment { display: inline-block; position: relative; max-width: 100%; box-sizing: border-box; vertical-align: baseline; line-height: 0; }
+    .te-image-attachment img { display: block; width: 100%; height: auto; transform-origin: center; }
+    .te-image-attachment.is-selected { outline: 1px solid #8b8bff; }
+    .te-image-rotate {
+      position: absolute; z-index: 4; left: 50%; top: 0; transform: translate(-50%, -50%); width: 26px; height: 26px;
+      display: grid; place-items: center; border: 0; border-radius: 50%; background: #292929; color: #fff; cursor: grab; line-height: 1;
+    }
+    .te-image-rotate .material-symbols-outlined { font-size: 18px; }
+    .te-image-handle {
+      position: absolute; z-index: 2; width: 14px; height: 14px; padding: 0; border: 2px solid #b8b8b8;
+      border-radius: 50%; background: #fff; transform: translate(-50%, -50%);
+    }
+    .te-image-handle[data-direction="n"], .te-image-handle[data-direction="s"] { left: 50%; cursor: ns-resize; }
+    .te-image-handle[data-direction="e"], .te-image-handle[data-direction="w"] { top: 50%; cursor: ew-resize; }
+    .te-image-handle[data-direction="nw"], .te-image-handle[data-direction="se"] { cursor: nwse-resize; }
+    .te-image-handle[data-direction="ne"], .te-image-handle[data-direction="sw"] { cursor: nesw-resize; }
+    .te-image-handle[data-direction="n"] { top: 0; }
+    .te-image-handle[data-direction="s"] { top: 100%; }
+    .te-image-handle[data-direction="e"] { left: 100%; }
+    .te-image-handle[data-direction="w"] { left: 0; }
+    .te-image-handle[data-direction="nw"] { left: 0; top: 0; }
+    .te-image-handle[data-direction="ne"] { left: 100%; top: 0; }
+    .te-image-handle[data-direction="sw"] { left: 0; top: 100%; }
+    .te-image-handle[data-direction="se"] { left: 100%; top: 100%; }
+    .te-image-attachment:not(.is-selected) .te-image-rotate,
+    .te-image-attachment:not(.is-selected) .te-image-handle { display: none; }
+
+    .te-file-attachment {
+      position: relative; display: inline-block; width: min(325px, 100%); margin: 4px 0;
+      color: #f3f3f3; vertical-align: baseline; line-height: normal;
+    }
+    .teams-editor:not(.dark-mode) .te-file-attachment { color: #242424; }
+    .te-file-card { min-height: 58px; display: flex; align-items: center; gap: 10px; padding: 8px 10px; box-sizing: border-box; border: 1px solid #555; border-radius: 6px; background: #292929; }
+    .teams-editor:not(.dark-mode) .te-file-card { border-color: #d0d0d0; background: #f8f8f8; }
+    .te-file-attachment--pdf { width: min(600px, 100%); }
+    .te-file-attachment--pdf .te-file-card,
+    .te-file-attachment--pdf .te-file-progress { width: min(325px, 100%); }
+    .te-pdf-preview {
+      display: block; width: min(560px, 100%); aspect-ratio: 1.414; margin-top: 14px;
+      border: 0; border-top: 1px solid #555; background: #fff;
+    }
+    .te-pdf-preview[hidden] { display: none; }
+    .te-file-icon { font-size: 26px; color: #f06464; }
+    .te-file-attachment:not([data-extension="pdf"]) .te-file-icon { color: #8b8bff; }
+    .te-file-info { min-width: 0; flex: 1; }
+    .te-file-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
+    .te-file-size { color: #aaa; font-size: 12px; }
+    .teams-editor:not(.dark-mode) .te-file-size { color: #666; }
+    .te-file-menu-button { border: 0; border-radius: 4px; padding: 4px; background: transparent; color: inherit; cursor: pointer; }
+    .te-file-menu-button:hover { background: rgba(127,127,127,.2); }
+    .te-file-progress { height: 3px; overflow: hidden; background: #505050; }
+    .te-file-progress[hidden] { display: none; }
+    .te-file-progress-bar { height: 100%; width: 0; background: #8b8bff; transition: width .08s linear; }
+    .te-file-menu {
+      position: absolute; z-index: 5; right: 8px; bottom: calc(100% - 6px); min-width: 172px; padding: 4px 0;
+      display: none; flex-direction: column; border: 1px solid #444; border-radius: 4px; background: #292929;
+      box-shadow: 0 4px 16px rgba(0,0,0,.35);
+    }
+    .te-file-menu.is-open { display: flex; }
+    .teams-editor:not(.dark-mode) .te-file-menu { border-color: #ddd; background: #fff; box-shadow: 0 4px 16px rgba(0,0,0,.15); }
+    .te-file-menu button, .te-file-menu a { display: flex; align-items: center; gap: 10px; border: 0; padding: 8px 12px; background: transparent; color: inherit; text-align: left; text-decoration: none; cursor: pointer; }
+    .te-file-menu button:hover, .te-file-menu a:hover { background: rgba(127,127,127,.2); }
+    .te-file-menu .material-symbols-outlined { font-size: 20px; }
+
+    .te-preview-dialog {
+      width: min(900px, 90vw); height: min(700px, 85vh); max-width: 90vw; max-height: 85vh; padding: 0;
+      border: 1px solid #555; border-radius: 8px; background: #242424; color: #fff;
+    }
+    .te-preview-dialog::backdrop { background: rgba(0,0,0,.7); }
+    .te-preview-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 12px; }
+    .te-preview-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .te-preview-content { width: 100%; height: calc(100% - 48px); overflow: auto; background: #fff; }
+    .te-preview-frame { width: 100%; height: 100%; border: 0; }
+    .te-preview-image { display: block; width: 100%; height: 100%; object-fit: contain; background: #242424; }
+    .te-preview-message { padding: 24px; }
+    .te-preview-download { color: #b5b5ff; }
+
+    /* =========================================
+       TOGGLES E BOTÕES GERAIS
+       ========================================= */
+    .toggle-wrapper { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+    .switch { position: relative; display: inline-block; width: 46px; height: 24px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .3s; border-radius: 24px; }
+    .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; }
+    input:checked + .slider { background-color: #011B4C; }
+    input:checked + .slider:before { transform: translateX(22px); }
+    #linkContainer { display: none; margin-top: 10px; }
+
+    button[type="submit"] { padding: 12px 20px; width: 100%; background: #011B4C; color: white; border: none; border-radius: 6px; font-size: 1rem; font-weight: bold; cursor: pointer; transition: background 0.2s; margin-top: 10px; }
+    button[type="submit"]:hover { background: #3B74A6; }
+    button:disabled { background: #ccc; cursor: not-allowed; }
+    
+    .warning-box { display: none; margin-top: 15px; padding: 15px; border-radius: 8px; background: #fff3cd; border: 1px solid #ffeeba; color: #856404; font-size: 0.9rem; }
+    .btn-warning { background: #d9534f !important; margin-top: 10px; }
+    .status-box { margin-top: 20px; padding: 15px; border-radius: 8px; background: #edf4fb; font-size: 0.9rem; }
+    .status-box p { margin: 4px 0; font-weight: 600; }
+
+/* Identidade visual e refinamento do formulário */
+:root {
+  color-scheme: light;
+  --refer-navy: #0b2e59;
+  --refer-blue: #1769aa;
+  --refer-blue-dark: #10558e;
+  --refer-green: #39a66c;
+  --text-primary: #172b43;
+  --text-muted: #65758b;
+  --border-soft: #dce5ef;
+  --surface-soft: #f7f9fc;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  padding: 52px 24px;
+  background:
+    radial-gradient(ellipse at 50% -10%, rgba(33, 112, 173, .12), transparent 48%),
+    #f2f6fa;
+  color: var(--text-primary);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.card {
+  width: min(100%, 920px);
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 36px 42px 30px;
+  border: 1px solid rgba(205, 218, 232, .85);
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 22px 60px rgba(23, 51, 82, .11), 0 2px 8px rgba(23, 51, 82, .04);
+}
+
+.brand-header {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin: 0 0 32px;
+  padding: 0 0 26px;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.brand-logo {
+  display: block;
+  width: 164px;
+  height: auto;
+  flex: 0 0 auto;
+}
+
+.brand-heading { min-width: 0; }
+.brand-eyebrow {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--refer-green);
+  font-size: .7rem;
+  font-weight: 750;
+  letter-spacing: .16em;
+}
+
+.brand-header h2 {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  color: var(--refer-navy);
+  font-size: clamp(1.45rem, 3vw, 1.85rem);
+  font-weight: 700;
+  letter-spacing: -.035em;
+  line-height: 1.2;
+}
+
+.form-group { margin-bottom: 22px; }
+.form-row { gap: 20px; }
+.form-row .form-group { min-width: 0; }
+
+label {
+  margin-bottom: 8px;
+  color: #283d55;
+  font-size: .88rem;
+  font-weight: 650;
+}
+
+label .req { color: #d14b55; }
+
+input[type="text"], input[type="date"], input[type="time"], input[type="url"], select {
+  min-height: 46px;
+  padding: 10px 13px;
+  border: 1px solid #d5dfeb;
+  border-radius: 9px;
+  background-color: #fff;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: .94rem;
+  transition: border-color .16s ease, box-shadow .16s ease, background-color .16s ease;
+}
+
+input:hover, select:hover { border-color: #aabbd0; }
+input:focus, select:focus {
+  border-color: var(--refer-blue);
+  outline: 0;
+  box-shadow: 0 0 0 4px rgba(23, 105, 170, .13);
+}
+
+input::placeholder { color: #8a99aa; }
+.description-text { margin-top: 6px; color: var(--text-muted); font-size: .81rem; line-height: 1.5; }
+
+.wp-description {
+  display: block;
+  width: 100%;
+  min-height: 150px;
+  resize: vertical;
+  padding: 13px 14px;
+  border: 1px solid #d5dfeb;
+  border-radius: 10px;
+  background: #fff;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: .94rem;
+  line-height: 1.55;
+  transition: border-color .16s ease, box-shadow .16s ease;
+}
+.wp-description::placeholder { color: #8a99aa; }
+.wp-description:hover { border-color: #aabbd0; }
+.wp-description:focus {
+  border-color: var(--refer-blue);
+  outline: 0;
+  box-shadow: 0 0 0 4px rgba(23, 105, 170, .13);
+}
+
+.toggle-wrapper { min-height: 42px; }
+.toggle-wrapper > .material-symbols-outlined { color: var(--refer-blue); }
+.toggle-wrapper > span:last-child { color: var(--text-primary) !important; }
+.slider { background-color: #b8c6d5; }
+input:checked + .slider { background-color: var(--refer-blue); }
+
+.teams-editor {
+  border-color: #d5dfeb;
+  border-radius: 11px;
+  box-shadow: 0 2px 7px rgba(25, 48, 75, .04);
+}
+.teams-editor:focus-within {
+  border-color: #9abbd8;
+  box-shadow: 0 0 0 3px rgba(23, 105, 170, .08);
+}
+.te-content { min-height: 138px; }
+.te-bottom-bar { border-bottom-left-radius: 10px; border-bottom-right-radius: 10px; }
+
+button[type="submit"] {
+  min-height: 50px;
+  margin-top: 8px;
+  padding: 13px 20px;
+  border-radius: 9px;
+  background: var(--refer-navy);
+  box-shadow: 0 4px 10px rgba(11, 46, 89, .16);
+  font-size: .96rem;
+  font-weight: 650;
+  letter-spacing: .005em;
+  transition: background-color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+
+button[type="submit"]:hover {
+  background: var(--refer-blue-dark);
+  box-shadow: 0 6px 14px rgba(11, 46, 89, .2);
+  transform: translateY(-1px);
+}
+
+button:focus-visible {
+  outline: 3px solid rgba(23, 105, 170, .42);
+  outline-offset: 2px;
+}
+
+button:disabled { background: #aab6c4; box-shadow: none; transform: none; }
+
+.warning-box {
+  border: 1px solid #f0d493;
+  border-radius: 10px;
+  background: #fff9e9;
+  color: #785516;
+  line-height: 1.5;
+}
+
+.status-box {
+  margin-top: 22px;
+  padding: 14px 18px;
+  border: 1px solid #e0e8f1;
+  border-radius: 10px;
+  background: var(--surface-soft);
+  color: #40536a;
+  font-size: .84rem;
+}
+.status-box p { font-weight: 600; line-height: 1.5; }
+
+@media (max-width: 640px) {
+  body { padding: 20px 12px; }
+  .card { padding: 25px 20px 20px; border-radius: 14px; }
+  .brand-header { align-items: flex-start; gap: 15px; margin-bottom: 25px; padding-bottom: 20px; }
+  .brand-logo { width: 118px; }
+  .brand-eyebrow { font-size: .62rem; }
+  .brand-header h2 { font-size: 1.35rem; }
+  .form-row { display: block; }
+  .form-row .form-group { margin-bottom: 20px; }
+}
+
+@media (max-width: 390px) {
+  .brand-header { flex-direction: column; gap: 12px; }
+  .brand-logo { width: 130px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
+}
