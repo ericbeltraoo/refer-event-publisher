@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Cadastrar Evento - Intranet REFER</title>
+  <!-- Ícones Material Symbols usados pelas ferramentas do editor -->
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+  
+  <link rel="stylesheet" href="/css/styles.css?v=20261015-attachments-v2">
+</head>
+<body>
+
+  <div class="card">
+    <header class="brand-header">
+      <img class="brand-logo" src="/assets/logo-refer.png" alt="Fundação REFER">
+      <div class="brand-heading">
+        <span class="brand-eyebrow">FUNDAÇÃO REFER</span>
+        <h2>Agendar e Publicar Evento</h2>
+      </div>
+    </header>
+    
+    <form id="formEvento" onsubmit="event.preventDefault(); publicarEvento(false);">
+      
+      <div class="form-group">
+        <label for="titulo">Título do evento <span class="req">*</span></label>
+        <input type="text" id="titulo" placeholder="Ex.: Reunião Geral de Resultados" required>
+      </div>
+
+      <div class="form-group">
+        <label for="participantes">Convidar participantes <span class="req">*</span></label>
+        <input type="text" id="participantes" value="todos@refer.com.br" placeholder="exemplo@refer.com.br" required>
+        <span class="description-text">Separe múltiplos e-mails por ponto e vírgula (;).</span>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="dataEvento">Data do evento <span class="req">*</span></label>
+          <input type="date" id="dataEvento" required>
+        </div>
+        <div class="form-group">
+          <label for="organizador">Organização / área responsável <span class="req">*</span></label>
+          <input type="text" id="organizador" placeholder="Ex.: Comunicação" required>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="horaInicio">Hora de início <span class="req">*</span></label>
+          <input type="time" id="horaInicio" required>
+        </div>
+        <div class="form-group">
+          <label for="horaTermino">Hora de término <span class="req">*</span></label>
+          <input type="time" id="horaTermino" required>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="local">Local <span class="req">*</span></label>
+          <input type="text" id="local" placeholder="Ex.: Auditório principal ou Microsoft Teams" required>
+        </div>
+        <div class="form-group">
+          <label for="lembrete">Lembrete / Notificação <span class="req">*</span></label>
+          <select id="lembrete">
+            <option value="0">No momento do evento</option>
+            <option value="5">5 minutos antes</option>
+            <option value="15" selected>15 minutos antes</option>
+            <option value="30">30 minutos antes</option>
+            <option value="60">1 hora antes</option>
+            <option value="120">2 horas antes</option>
+            <option value="720">12 horas antes</option>
+            <option value="1440">1 dia antes</option>
+            <option value="10080">1 semana antes</option>
+            <option value="-1">Não lembrar</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- NOVO: Toggle "Teams reunião" -->
+      <div class="form-group">
+        <div class="toggle-wrapper" style="justify-content: flex-start; gap: 12px; margin-bottom: 8px;">
+          <span class="material-symbols-outlined" style="font-size: 24px;">videocam</span>
+          <label class="switch">
+            <input type="checkbox" id="isTeamsMeeting">
+            <span class="slider"></span>
+          </label>
+          <span style="font-weight: 600; font-size: 1rem; color: #1d2939;">Teams reunião</span>
+        </div>
+        <span class="description-text">Se ativado, o Power Automate irá gerar automaticamente o link da reunião online e enviá-lo para a Intranet.</span>
+      </div>
+
+      <div class="form-group">
+        <label for="descricaoEditor">Descrição do evento no Teams/Calendário <span class="req">*</span></label>
+        <div class="teams-editor" id="teamsEditor">
+          
+          <!-- Área de Digitação -->
+          <div class="te-attachment-area" id="attachmentArea" hidden>
+            <div class="te-attachments" id="attachments"></div>
+            <div class="te-attachment-separator" aria-hidden="true"></div>
+          </div>
+          <div id="descricaoEditor" class="te-content" contenteditable="true" data-placeholder="Adicione uma descrição para este evento no Teams"></div>
+          
+          <!-- Barra de Formatação Rica (Expansível) -->
+          <div class="te-format-bar" id="formatBar">
+            <button type="button" class="te-btn" onclick="execCmd('removeFormat')" title="Limpar Formatação"><span class="material-symbols-outlined">format_paint</span></button>
+            <button type="button" class="te-btn" onclick="setFontSize()" title="Tamanho da Fonte"><span class="material-symbols-outlined">format_size</span></button>
+            <div class="te-divider"></div>
+            <button type="button" class="te-btn" onclick="execCmd('bold')" title="Negrito"><span class="material-symbols-outlined">format_bold</span></button>
+            <button type="button" class="te-btn" onclick="execCmd('italic')" title="Itálico"><span class="material-symbols-outlined">format_italic</span></button>
+            <button type="button" class="te-btn" onclick="execCmd('underline')" title="Sublinhado"><span class="material-symbols-outlined">format_underlined</span></button>
+            <button type="button" class="te-btn" onclick="execCmd('strikeThrough')" title="Tachado"><span class="material-symbols-outlined">strikethrough_s</span></button>
+            <div class="te-divider"></div>
+            <button type="button" class="te-btn" onclick="chooseColor('hiliteColor')" title="Cor do Realce">
+              <div class="te-color-btn"><span class="material-symbols-outlined" style="font-size:18px;">border_color</span></div>
+            </button>
+            <button type="button" class="te-btn" onclick="chooseColor('foreColor')" title="Cor da Fonte">
+              <div class="te-color-btn"><span>A</span><div class="te-color-bar" style="background:#d9383a;"></div></div>
+            </button>
+            <div class="te-divider"></div>
+            <button type="button" class="te-btn" onclick="execCmd('insertUnorderedList')" title="Marcadores"><span class="material-symbols-outlined">format_list_bulleted</span></button>
+            <button type="button" class="te-btn" onclick="execCmd('insertOrderedList')" title="Numeração"><span class="material-symbols-outlined">format_list_numbered</span></button>
+            <button type="button" class="te-btn" onclick="execCmd('outdent')" title="Diminuir Recuo"><span class="material-symbols-outlined">format_indent_decrease</span></button>
+            <button type="button" class="te-btn" onclick="execCmd('indent')" title="Aumentar Recuo"><span class="material-symbols-outlined">format_indent_increase</span></button>
+            <button type="button" class="te-btn" onclick="execCmd('formatBlock', 'BLOCKQUOTE')" title="Citação"><span class="material-symbols-outlined">format_quote</span></button>
+            <div class="te-divider"></div>
+            <button type="button" class="te-btn" onclick="addLink()" title="Inserir Link"><span class="material-symbols-outlined">link</span></button>
+          </div>
+
+          <!-- Barra de Ferramentas Inferior Padrão -->
+          <div class="te-bottom-bar">
+            
+            <!-- Anexo com Dropdown -->
+            <div class="te-attach-wrapper" id="attachWrapper">
+              <button type="button" class="te-btn" onclick="toggleDropdown()" style="width: auto;" title="Anexar arquivos">
+                <span class="material-symbols-outlined">attach_file</span>
+                <span class="material-symbols-outlined" style="font-size: 16px; margin-left:-4px;">keyboard_arrow_down</span>
+              </button>
+              
+              <div class="te-attach-dropdown" id="attachMenu">
+                <div class="te-dropdown-header">Anexar de</div>
+                <button type="button" class="te-dropdown-item" onclick="document.getElementById('filePicker').click()"><span class="material-symbols-outlined">folder</span> Navegar neste computador</button>
+              </div>
+            </div>
+
+            <button type="button" class="te-btn" onclick="document.getElementById('imagePicker').click()" title="Inserir Imagem"><span class="material-symbols-outlined">image</span></button>
+            <div class="te-picker-wrapper">
+              <button type="button" class="te-btn" onclick="toggleEmojiMenu()" title="Emoji"><span class="material-symbols-outlined">sentiment_satisfied</span></button>
+              <div class="te-emoji-menu" id="emojiMenu" role="menu" aria-label="Selecionar emoji"></div>
+            </div>
+            <input type="file" id="filePicker" multiple hidden onchange="insertFiles(this.files); closeAttachDropdown()" oncancel="closeAttachDropdown()">
+            <input type="file" id="imagePicker" accept="image/*" multiple hidden onchange="insertImages(this.files)">
+            
+            <!-- Botão de Alternar Formatação Rica -->
+            <button type="button" class="te-btn" id="btnFormatToggle" onclick="toggleFormatBar()" title="Formatar (Expandir opções)">
+              <span class="material-symbols-outlined">edit_document</span>
+            </button>
+            
+            <!-- Alternador de Tema Escuro/Claro -->
+            <button type="button" class="te-btn" onclick="toggleDarkMode()" title="Exibir com uma tela de fundo escura/clara">
+              <span class="material-symbols-outlined" id="iconTheme">dark_mode</span>
+            </button>
+
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="descricaoWordPress">Descrição do anúncio no WordPress <span class="req">*</span></label>
+        <textarea id="descricaoWordPress" class="wp-description" rows="6" required placeholder="Escreva o texto que será publicado no anúncio do WordPress."></textarea>
+      </div>
+
+      <!-- Toggle Switch para Link Manual da Intranet -->
+      <div class="form-group">
+        <div class="toggle-wrapper">
+          <label for="toggleLink" style="margin-bottom:0; cursor:pointer;">Inserir link de participação manualmente?</label>
+          <label class="switch">
+            <input type="checkbox" id="toggleLink" onchange="toggleLinkBox()">
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div id="linkContainer">
+          <input type="url" id="link" placeholder="https://teams.microsoft.com/...">
+          <span class="description-text">Use caso seja um link externo (ex: Zoom, formulário externo, etc). Se "Teams reunião" estiver marcado acima, este campo será ignorado.</span>
+        </div>
+      </div>
+
+      <button id="btnEnviar" type="submit">Criar no Calendário & Publicar no Site</button>
+
+      <!-- Alerta de Evento Já Existente -->
+      <div id="alertaDuplicado" class="warning-box">
+        <p>⚠️ <strong>Atenção:</strong> Já existe um evento idêntico registrado com este mesmo título e data no WordPress e no Calendário.</p>
+        <button type="button" class="btn-warning" onclick="publicarEvento(true)">Enviar mesmo assim (Forçar Reenvio)</button>
+      </div>
+    </form>
+
+    <div class="status-box">
+      <p id="statusTeams">Teams/Calendário: Aguardando envio...</p>
+      <p id="statusWP">WordPress: Aguardando envio...</p>
+    </div>
+  </div>
+
+  <dialog class="te-preview-dialog" id="attachmentPreview" aria-label="Visualização do anexo">
+    <div class="te-preview-header">
+      <span class="te-preview-name" id="attachmentPreviewName"></span>
+      <form method="dialog">
+        <button type="submit" class="te-btn" aria-label="Fechar visualização"><span class="material-symbols-outlined">close</span></button>
+      </form>
+    </div>
+    <div class="te-preview-content" id="attachmentPreviewContent"></div>
+  </dialog>
+
+  <script src="/js/app.js?v=20261015-attachments-v2" defer></script>
+</body>
+</html>

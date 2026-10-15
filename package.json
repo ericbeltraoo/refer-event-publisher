@@ -1,0 +1,13 @@
+{
+  "name": "refer-event-publisher",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Aplicação interna para agendamento e publicação de eventos.",
+  "engines": {
+    "node": ">=20.6"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test"
+  }
+}
