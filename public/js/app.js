@@ -46,6 +46,7 @@
     const wizardPrevious = document.getElementById('wizardPrevious');
     const wizardNext = document.getElementById('wizardNext');
     const wizardSubmit = document.getElementById('btnEnviar');
+    const wizardCalendarSubmit = document.getElementById('btnEnviarCalendario');
     const eventBackButton = document.getElementById('eventBackButton');
     const eventPageTitle = document.getElementById('eventPageTitle');
     const eventPageDescription = document.getElementById('eventPageDescription');
@@ -203,6 +204,18 @@
       window.setTimeout(() => toast.remove(), 240);
     }
 
+    function showCalendarConflictDialog(emails) {
+      if (!emails.length) return;
+      const dialog = document.getElementById('calendarConflictDialog');
+      const list = document.getElementById('calendarConflictEmails');
+      list.replaceChildren(...emails.map(email => {
+        const item = document.createElement('li');
+        item.textContent = email;
+        return item;
+      }));
+      dialog.showModal();
+    }
+
     function renderParticipantChips() {
       participantChips.replaceChildren();
       participantEmails.forEach((email, index) => {
@@ -285,9 +298,10 @@
       wizardPrevious.hidden = step === 1;
       wizardNext.hidden = step === wizardPanels.length;
       wizardSubmit.hidden = step !== wizardPanels.length;
+      wizardCalendarSubmit.hidden = step !== wizardPanels.length;
       const stepCopy = [
         ['Criar evento', 'Preencha as informações do evento para que ele seja divulgado no calendário e no site da Fundação REFER.'],
-        ['Publicar evento', 'Configure as descrições do evento para o calendário e para o site da Fundação REFER.'],
+        ['Publicar evento', 'Configure a descrição do calendário e, se desejar publicar no site, o texto do anúncio.'],
         ['Revisar evento', 'Confira todas as informações antes de publicar. Se algo precisar ser alterado, volte à etapa correspondente.']
       ][step - 1];
       eventPageTitle.textContent = stepCopy[0];
@@ -332,12 +346,6 @@
         if (!teamsDescription.innerText.trim()) {
           showToast('Adicione a descrição do evento para o Teams/Calendário.', 'error');
           teamsDescription.focus();
-          return false;
-        }
-        const wordpressDescription = document.getElementById('descricaoWordPress');
-        if (!wordpressDescription.value.trim()) {
-          showToast('Adicione a descrição do anúncio para o WordPress.', 'error');
-          wordpressDescription.focus();
           return false;
         }
       }
@@ -989,21 +997,18 @@
 
     function serializeDescription() {
       const copy = document.getElementById('descricaoEditor').cloneNode(true);
-      copy.querySelectorAll('.te-image-attachment').forEach((attachment, index) => {
+      copy.querySelectorAll('.te-image-attachment').forEach(attachment => {
         const image = attachment.querySelector('img');
         const outputImage = document.createElement('img');
+        outputImage.src = image.src;
         outputImage.alt = image.alt;
-        outputImage.dataset.teamsInlineId = `teams-inline-image-${index + 1}@refer.local`;
         outputImage.style.width = attachment.style.width || 'auto';
         outputImage.style.maxWidth = '100%';
         const rotation = Number(attachment.dataset.rotation);
         if (rotation) outputImage.style.transform = `rotate(${rotation}deg)`;
         attachment.replaceWith(outputImage);
       });
-      return copy.innerHTML.trim().replace(
-        /\sdata-teams-inline-id="([^"]+)"/g,
-        ' src="cid:$1"'
-      );
+      return copy.innerHTML.trim();
     }
 
     function serializeTeamsAttachments() {
@@ -1017,14 +1022,7 @@
           isInline: false
         };
       });
-      const images = Array.from(document.querySelectorAll('#descricaoEditor .te-image-attachment img')).map((image, index) => ({
-        name: image.alt || `imagem-${index + 1}`,
-        contentType: image.src.slice(5, image.src.indexOf(';')) || 'application/octet-stream',
-        contentBytes: getDataUrlContent(image.src, image.alt || `imagem-${index + 1}`),
-        isInline: true,
-        contentId: `teams-inline-image-${index + 1}@refer.local`
-      }));
-      return [...files, ...images];
+      return files;
     }
 
     function serializeWordPressDescription(text) {
@@ -1129,11 +1127,16 @@
       if (!isChecked) document.getElementById('link').value = '';
     }
 
-    async function publicarEvento(forcarEnvio = false) {
+    async function publicarEvento(forcarEnvio = false, publicarNoWordPress = true) {
       const btn = document.getElementById('btnEnviar');
+      const calendarBtn = document.getElementById('btnEnviarCalendario');
       const alertaDuplicado = document.getElementById('alertaDuplicado');
       const statusTeams = document.getElementById('statusTeams');
       const statusWP = document.getElementById('statusWP');
+      const setPublishButtonsDisabled = disabled => {
+        btn.disabled = disabled;
+        calendarBtn.disabled = disabled;
+      };
 
       alertaDuplicado.style.display = 'none';
 
@@ -1157,20 +1160,22 @@
         descricaoEditor.focus();
         return;
       }
-      if (!descricaoWordPressTexto) {
+      if (publicarNoWordPress && !descricaoWordPressTexto) {
         showToast('Adicione a descrição do anúncio para o WordPress.', 'error');
         document.getElementById('descricaoWordPress').focus();
         return;
       }
       if (pendingFileReads.length) {
-        btn.disabled = true;
+        setPublishButtonsDisabled(true);
         await Promise.all(pendingFileReads);
         pendingFileReads = [];
-        btn.disabled = false;
+        setPublishButtonsDisabled(false);
       }
       const descricaoHtml = serializeDescription();
       const anexosTeams = serializeTeamsAttachments();
-      const descricaoWordPressHtml = serializeWordPressDescription(descricaoWordPressTexto);
+      const descricaoWordPressHtml = publicarNoWordPress
+        ? serializeWordPressDescription(descricaoWordPressTexto)
+        : '';
 
       // Se o usuário digitou um link manual, ele captura aqui
       const linkManual = document.getElementById('toggleLink').checked ? document.getElementById('link').value.trim() : '';
@@ -1182,10 +1187,10 @@
       const urlTeams = "/api/teams";
       const urlWP = "/api/wordpress/events";
 
-      btn.disabled = true;
+      setPublishButtonsDisabled(true);
 
       // 0. VERIFICAÇÃO DE DUPLICIDADE
-      if (!forcarEnvio) {
+      if (publicarNoWordPress && !forcarEnvio) {
         statusWP.innerText = "WordPress: Verificando duplicidade no sistema...";
         statusTeams.innerText = "Teams/Calendário: Aguardando verificação...";
 
@@ -1205,7 +1210,7 @@
               statusWP.innerText = "WordPress: ⚠️ Envio suspenso (Evento idêntico detectado).";
               statusTeams.innerText = "Teams/Calendário: ⚠️ Envio suspenso (Evento idêntico detectado).";
               showToast('Já existe um evento com este título e data. Revise os dados antes de reenviar.', 'warning');
-              btn.disabled = false;
+              setPublishButtonsDisabled(false);
               return;
             }
           }
@@ -1216,9 +1221,12 @@
 
       // 1. TEAMS / POWER AUTOMATE
       statusTeams.innerText = "Teams/Calendário: Agendando evento...";
-      statusWP.innerText = "WordPress: Aguardando o link da reunião (se ativado)...";
+      statusWP.innerText = publicarNoWordPress
+        ? "WordPress: Aguardando o link da reunião (se ativado)..."
+        : "WordPress: Não será publicado (modo somente calendário).";
 
       let teamsSucceeded = false;
+      let calendarConflicts = [];
       try {
         const respTeams = await fetch(urlTeams, {
           method: 'POST',
@@ -1243,6 +1251,12 @@
           // Tenta extrair a resposta do Power Automate (caso esteja configurado com o bloco de 'Response')
           try {
             const dadosResposta = await respTeams.json();
+            if (dadosResposta && typeof dadosResposta === 'object' && Array.isArray(dadosResposta.conflitos)) {
+              calendarConflicts = [...new Set(dadosResposta.conflitos
+                .filter(email => typeof email === 'string')
+                .map(email => email.trim())
+                .filter(email => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)))];
+            }
             // Se o botão estava marcado e o PA devolveu um linkGerado
             if (isTeamsMeeting && dadosResposta.linkGerado) {
               linkFinal = dadosResposta.linkGerado; // O Link Final passa a ser o do Teams
@@ -1263,9 +1277,19 @@
       }
 
       if (anexosTeams.length && !teamsSucceeded) {
-        statusWP.innerText = "WordPress: publicação cancelada porque o Teams/Calendário não confirmou o envio dos anexos.";
+        statusWP.innerText = publicarNoWordPress
+          ? "WordPress: publicação cancelada porque o Teams/Calendário não confirmou o envio dos anexos."
+          : "WordPress: não publicado (modo somente calendário).";
         showToast('A publicação foi interrompida porque o envio dos anexos ao Teams/Calendário não foi confirmado.', 'error');
-        btn.disabled = false;
+        setPublishButtonsDisabled(false);
+        return;
+      }
+
+      if (!publicarNoWordPress) {
+        statusWP.innerText = "WordPress: não publicado (modo somente calendário).";
+        if (teamsSucceeded) showToast('Evento criado somente no Calendário/Teams.', 'success');
+        setPublishButtonsDisabled(false);
+        showCalendarConflictDialog(calendarConflicts);
         return;
       }
 
@@ -1309,6 +1333,7 @@
         statusWP.innerText = "WordPress: ❌ Erro de conexão/CORS: " + e.message;
         showToast('Não foi possível conectar ao WordPress para publicar o evento.', 'error');
       } finally {
-        btn.disabled = false;
+        setPublishButtonsDisabled(false);
       }
+      showCalendarConflictDialog(calendarConflicts);
     }

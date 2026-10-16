@@ -6,7 +6,7 @@
   <!-- Ícones Material Symbols usados pelas ferramentas do editor -->
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
 
-  <link rel="stylesheet" href="/css/styles.css?v=20261016-speakers-v15">
+  <link rel="stylesheet" href="/css/styles.css?v=20261016-speakers-v21">
 </head>
 <body>
 
@@ -337,7 +337,8 @@
 
                 <div class="form-group">
                   <label for="descricaoWordPress">Descrição do anúncio no WordPress <span class="req">*</span></label>
-                  <textarea id="descricaoWordPress" class="wp-description" rows="6" required placeholder="Escreva o texto que será publicado no anúncio do WordPress."></textarea>
+                  <textarea id="descricaoWordPress" class="wp-description" rows="6" placeholder="Escreva o texto que será publicado no anúncio do WordPress."></textarea>
+                  <span class="description-text">Obrigatória apenas ao escolher publicar o evento no site.</span>
                 </div>
               </section>
 
@@ -350,7 +351,7 @@
                       <span class="material-symbols-outlined" aria-hidden="true">calendar_month</span>
                       <div>
                         <h2 id="reviewTitle">Informações do evento</h2>
-                        <p>Confira os dados antes de criar o evento e publicar o anúncio.</p>
+                        <p>Confira os dados antes de criar o evento e, se desejar, publicar o anúncio.</p>
                       </div>
                     </div>
                     <h3 class="event-review-title" data-review-value="titulo">—</h3>
@@ -384,7 +385,8 @@
                 <button type="button" class="wizard-button wizard-button--back" id="wizardPrevious" hidden>Voltar</button>
                 <span class="wizard-actions-spacer"></span>
                 <button type="button" class="wizard-button wizard-button--next" id="wizardNext">Continuar <span class="material-symbols-outlined" aria-hidden="true">arrow_forward</span></button>
-                <button id="btnEnviar" type="submit" hidden>Criar no Calendário &amp; Publicar no Site</button>
+                <button id="btnEnviar" class="wizard-submit-button" type="submit" hidden>Criar no Calendário &amp; Publicar no Site</button>
+                <button id="btnEnviarCalendario" class="wizard-submit-button" type="button" onclick="publicarEvento(false, false)" hidden>Somente criar no Calendário/Teams</button>
               </div>
             </form>
           </div>
@@ -426,7 +428,22 @@
     <div class="te-preview-content" id="attachmentPreviewContent"></div>
   </dialog>
 
+  <dialog class="calendar-conflict-dialog" id="calendarConflictDialog" aria-labelledby="calendarConflictTitle">
+    <div class="calendar-conflict-header">
+      <span class="material-symbols-outlined" aria-hidden="true">event_busy</span>
+      <h2 id="calendarConflictTitle">Conflitos de agenda</h2>
+      <form method="dialog">
+        <button type="submit" class="te-btn" aria-label="Fechar aviso"><span class="material-symbols-outlined">close</span></button>
+      </form>
+    </div>
+    <p>O evento foi criado, mas estas pessoas já têm outro compromisso nesse horário:</p>
+    <ul id="calendarConflictEmails"></ul>
+    <form method="dialog" class="calendar-conflict-actions">
+      <button type="submit" class="wizard-button wizard-button--next">Entendi</button>
+    </form>
+  </dialog>
+
   <div class="toast-stack" id="toastStack" aria-live="polite" aria-atomic="false"></div>
-  <script src="/js/app.js?v=20261016-speakers-v5" defer></script>
+  <script src="/js/app.js?v=20261016-speakers-v8" defer></script>
 </body>
 </html>
