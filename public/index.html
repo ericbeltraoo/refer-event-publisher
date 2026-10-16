@@ -2,66 +2,209 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Cadastrar Evento - Intranet REFER</title>
+  <title>Intranet REFER</title>
   <!-- Ícones Material Symbols usados pelas ferramentas do editor -->
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
-  
-  <link rel="stylesheet" href="/css/styles.css?v=20261015-attachments-v2">
+
+  <link rel="stylesheet" href="/css/styles.css?v=20261016-speakers-v15">
 </head>
 <body>
 
-  <div class="card">
-    <header class="brand-header">
-      <img class="brand-logo" src="/assets/logo-refer.png" alt="Fundação REFER">
-      <div class="brand-heading">
-        <span class="brand-eyebrow">FUNDAÇÃO REFER</span>
-        <h2>Agendar e Publicar Evento</h2>
+  <div class="app-layout">
+    <aside class="sidebar" aria-label="Navegação principal">
+      <a class="sidebar-brand" href="#painel" data-view-link="dashboard">
+        <img src="/assets/logo-refer.png" alt="Fundação REFER">
+        <span>Sistemas corporativos</span>
+      </a>
+      <span class="sidebar-section-label">MENU PRINCIPAL</span>
+      <nav class="sidebar-nav">
+        <button type="button" class="nav-item is-active" data-view-link="dashboard" aria-current="page">
+          <span class="material-symbols-outlined" aria-hidden="true">home</span>
+          <span>Painel</span>
+        </button>
+        <button type="button" class="nav-item" data-view-link="event">
+          <span class="material-symbols-outlined" aria-hidden="true">event_available</span>
+          <span>Criação de evento</span>
+        </button>
+        <button type="button" class="nav-item" data-view-link="development">
+          <span class="material-symbols-outlined" aria-hidden="true">record_voice_over</span>
+          <span>Cadastro Palestrantes</span>
+        </button>
+      </nav>
+      <div class="sidebar-footer">
+        <span class="material-symbols-outlined" aria-hidden="true">account_balance</span>
+        <span>Fundação REFER</span>
       </div>
-    </header>
-    
-    <form id="formEvento" onsubmit="event.preventDefault(); publicarEvento(false);">
-      
-      <div class="form-group">
-        <label for="titulo">Título do evento <span class="req">*</span></label>
-        <input type="text" id="titulo" placeholder="Ex.: Reunião Geral de Resultados" required>
-      </div>
+    </aside>
 
-      <div class="form-group">
-        <label for="participantes">Convidar participantes <span class="req">*</span></label>
-        <input type="text" id="participantes" value="todos@refer.com.br" placeholder="exemplo@refer.com.br" required>
-        <span class="description-text">Separe múltiplos e-mails por ponto e vírgula (;).</span>
-      </div>
+    <div class="app-main">
+      <header class="topbar">
+        <span class="topbar-title">Intranet REFER</span>
+        <div class="topbar-account">
+          <span class="topbar-account-icon material-symbols-outlined" aria-hidden="true">account_circle</span>
+          <span>REFER</span>
+        </div>
+      </header>
 
-      <div class="form-row">
-        <div class="form-group">
-          <label for="dataEvento">Data do evento <span class="req">*</span></label>
-          <input type="date" id="dataEvento" required>
-        </div>
-        <div class="form-group">
-          <label for="organizador">Organização / área responsável <span class="req">*</span></label>
-          <input type="text" id="organizador" placeholder="Ex.: Comunicação" required>
-        </div>
-      </div>
+      <main class="workspace">
+        <section class="dashboard-view" id="dashboardView">
+          <div class="dashboard-hero">
+            <h1 tabindex="-1">Olá, seja bem-vindo</h1>
+            <p>Selecione uma opção para continuar.</p>
+          </div>
+          <section class="dashboard-categories" aria-labelledby="categoriesTitle">
+            <div class="section-heading">
+              <div>
+                <h2 id="categoriesTitle">Ações disponíveis</h2>
+              </div>
+            </div>
+            <button type="button" class="category-card" data-view-link="event">
+              <span class="category-illustration" aria-hidden="true">
+                <span class="material-symbols-outlined">event_available</span>
+              </span>
+              <span class="category-title">Criação de evento</span>
+              <span class="category-description">Agende um evento no calendário e prepare a publicação no site.</span>
+              <span class="category-action">Criar evento <span class="material-symbols-outlined" aria-hidden="true">arrow_forward</span></span>
+            </button>
+            <button type="button" class="category-card" data-view-link="development">
+              <span class="category-illustration" aria-hidden="true">
+                <span class="material-symbols-outlined">record_voice_over</span>
+              </span>
+              <span class="category-title">Cadastro Palestrantes</span>
+              <span class="category-description">Em breve, uma área para cadastrar e gerenciar palestrantes.</span>
+              <span class="category-action">Em desenvolvimento <span class="material-symbols-outlined" aria-hidden="true">arrow_forward</span></span>
+            </button>
+          </section>
+        </section>
 
-      <div class="form-row">
-        <div class="form-group">
-          <label for="horaInicio">Hora de início <span class="req">*</span></label>
-          <input type="time" id="horaInicio" required>
-        </div>
-        <div class="form-group">
-          <label for="horaTermino">Hora de término <span class="req">*</span></label>
-          <input type="time" id="horaTermino" required>
-        </div>
-      </div>
+        <section class="development-view" id="developmentView" aria-labelledby="developmentTitle" hidden>
+          <div class="development-content">
+            <img
+              class="development-illustration"
+              src="/assets/fundacao-refer-em-desenvolvimento.png"
+              alt="Fundação REFER em desenvolvimento, com ferramentas e equipamentos de construção"
+            >
+            <div class="development-copy">
+              <span class="development-eyebrow">Cadastro Palestrantes</span>
+              <h1 id="developmentTitle" tabindex="-1">Estamos preparando esta página.</h1>
+              <p>Esta área está em desenvolvimento. Em breve, você poderá cadastrar e gerenciar os palestrantes por aqui.</p>
+              <button type="button" class="development-home-button" data-view-link="dashboard">Voltar ao painel</button>
+              <button type="button" class="development-previous-button" id="developmentPreviousButton">Voltar à página anterior</button>
+              <p class="development-support">Precisa de ajuda? Entre em contato com a equipe de suporte.</p>
+            </div>
+          </div>
+        </section>
 
-      <div class="form-row">
-        <div class="form-group">
-          <label for="local">Local <span class="req">*</span></label>
-          <input type="text" id="local" placeholder="Ex.: Auditório principal ou Microsoft Teams" required>
-        </div>
-        <div class="form-group">
-          <label for="lembrete">Lembrete / Notificação <span class="req">*</span></label>
-          <select id="lembrete">
+        <section class="event-view" id="eventView" hidden>
+          <div class="page-heading">
+            <button type="button" class="back-to-dashboard" id="eventBackButton" data-view-link="dashboard">
+              <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+              <span id="eventBackLabel">Voltar ao painel</span>
+            </button>
+            <h1 id="eventPageTitle" tabindex="-1">Criar evento</h1>
+            <p id="eventPageDescription">Preencha as informações do evento para que ele seja divulgado no calendário e no site da Fundação REFER.</p>
+          </div>
+          <nav class="wizard-stepper" aria-label="Etapas da criação do evento">
+            <button type="button" class="wizard-step is-active" data-step-button="1" aria-current="step">
+              <span class="wizard-step-number">1</span>
+              <span class="wizard-step-copy"><strong>Informações</strong><small>Dados principais do evento</small></span>
+            </button>
+            <span class="wizard-step-connector" aria-hidden="true"></span>
+            <button type="button" class="wizard-step" data-step-button="2" disabled>
+              <span class="wizard-step-number">2</span>
+              <span class="wizard-step-copy"><strong>Publicação</strong><small>Onde e como será divulgado</small></span>
+            </button>
+            <span class="wizard-step-connector" aria-hidden="true"></span>
+            <button type="button" class="wizard-step" data-step-button="3" disabled>
+              <span class="wizard-step-number">3</span>
+              <span class="wizard-step-copy"><strong>Revisar</strong><small>Confira antes de publicar</small></span>
+            </button>
+          </nav>
+          <div class="wizard-layout">
+            <div class="wizard-main card">
+              <form id="formEvento" novalidate onsubmit="handleWizardSubmit(event);">
+              <section class="wizard-panel" data-wizard-step="1">
+              <section class="event-details-section" aria-label="Informações principais do evento">
+                <div class="event-section-heading">
+                  <h3>Informações do evento</h3>
+                  <p>Defina os dados, o horário e os participantes.</p>
+                </div>
+                <div class="event-fields-grid">
+                  <div class="form-group event-field--wide">
+                    <label for="titulo">Título do evento <span class="req">*</span></label>
+                    <input type="text" id="titulo" placeholder="Ex.: Reunião Geral de Resultados" required>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="dataEvento">Data do evento <span class="req">*</span></label>
+                    <div class="date-picker">
+                      <input class="date-picker-value" type="date" id="dataEvento" required tabindex="-1" aria-hidden="true">
+                      <button class="date-picker-trigger" type="button" id="dataEventoButton" aria-label="Selecionar data do evento" aria-haspopup="dialog" aria-expanded="false" aria-controls="dataEventoCalendar" aria-required="true">
+                        <span id="dataEventoLabel">dd/mm/aaaa</span>
+                        <span class="material-symbols-outlined" aria-hidden="true">calendar_month</span>
+                      </button>
+                      <div class="date-picker-popover" id="dataEventoCalendar" role="dialog" aria-label="Selecionar data do evento" hidden>
+                        <div class="date-picker-header">
+                          <strong id="datePickerMonthLabel" aria-live="polite"></strong>
+                          <div class="date-picker-navigation">
+                            <button type="button" id="datePickerPrevious" aria-label="Mês anterior"><span class="material-symbols-outlined" aria-hidden="true">chevron_left</span></button>
+                            <button type="button" id="datePickerNext" aria-label="Próximo mês"><span class="material-symbols-outlined" aria-hidden="true">chevron_right</span></button>
+                          </div>
+                        </div>
+                        <div class="date-picker-weekdays" aria-hidden="true">
+                          <span>seg</span><span>ter</span><span>qua</span><span>qui</span><span>sex</span><span>sáb</span><span>dom</span>
+                        </div>
+                        <div class="date-picker-days" id="datePickerDays" role="grid" aria-labelledby="datePickerMonthLabel"></div>
+                        <div class="date-picker-footer">
+                          <button type="button" id="datePickerClear">Limpar</button>
+                          <button type="button" id="datePickerToday">Hoje</button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label for="organizador">Área responsável <span class="req">*</span></label>
+                    <div class="event-select-wrap">
+                      <select id="organizador" required>
+                        <option value="" selected disabled>Selecione a área responsável</option>
+                        <option value="DIPRE">DIPRE</option>
+                        <option value="GABIN">GABIN</option>
+                        <option value="GEJUR">GEJUR</option>
+                        <option value="GEPLO">GEPLO</option>
+                        <option value="GERIC">GERIC</option>
+                        <option value="GEAPI">GEAPI</option>
+                        <option value="GECOT">GECOT</option>
+                        <option value="GEINV">GEINV</option>
+                        <option value="GEATU">GEATU</option>
+                        <option value="GECAP">GECAP</option>
+                        <option value="GECOB">GECOB</option>
+                        <option value="GETIP">GETIP</option>
+                        <option value="GESER">GESER</option>
+                        <option value="GEPES">GEPES</option>
+                      </select>
+                      <span class="material-symbols-outlined" aria-hidden="true">expand_more</span>
+                    </div>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="horaInicio">Hora de início <span class="req">*</span></label>
+                    <input type="time" id="horaInicio" required>
+                  </div>
+                  <div class="form-group">
+                    <label for="horaTermino">Hora de término <span class="req">*</span></label>
+                    <div class="time-input-wrap time-input-wrap--end">
+                      <input type="time" id="horaTermino" required aria-describedby="horaTerminoHelp">
+                      <span class="time-input-hint" id="horaTerminoHelp">Encerramento do evento</span>
+                    </div>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="local">Local <span class="req">*</span></label>
+                    <input type="text" id="local" placeholder="Ex.: Auditório principal ou Microsoft Teams" required>
+                  </div>
+                  <div class="form-group">
+                    <label for="lembrete">Lembrete / Notificação <span class="req">*</span></label>
+                    <select id="lembrete">
             <option value="0">No momento do evento</option>
             <option value="5">5 minutos antes</option>
             <option value="15" selected>15 minutos antes</option>
@@ -72,26 +215,54 @@
             <option value="1440">1 dia antes</option>
             <option value="10080">1 semana antes</option>
             <option value="-1">Não lembrar</option>
-          </select>
-        </div>
-      </div>
+                    </select>
+                  </div>
+                  <div class="form-group event-field--wide">
+                    <label for="participantesInput">Convidar participantes <span class="req">*</span></label>
+                    <div class="participant-entry">
+                      <ul class="participant-chip-list" id="participantesChips" aria-label="Participantes adicionados" aria-live="polite"></ul>
+                      <input type="text" id="participantesInput" autocomplete="off" placeholder="Digite o e-mail e pressione Enter" aria-describedby="participantsHelp">
+                    </div>
+                    <input type="hidden" id="participantes" value="todos@refer.com.br">
+                    <span class="description-text" id="participantsHelp">Adicione um ou mais e-mails. Você também pode colar uma lista separada por ponto e vírgula.</span>
+                  </div>
+                  <div class="form-group event-field--wide">
+                    <div class="toggle-wrapper event-meeting-toggle">
+                      <span class="material-symbols-outlined" aria-hidden="true">videocam</span>
+                      <label class="switch">
+                        <input type="checkbox" id="isTeamsMeeting">
+                        <span class="slider"></span>
+                      </label>
+                      <span>Teams reunião</span>
+                    </div>
+                    <span class="description-text">Se ativado, o Power Automate irá gerar automaticamente o link da reunião online e enviá-lo para a Intranet.</span>
+                    <div class="manual-link-controls">
+                      <div class="toggle-wrapper event-link-toggle">
+                        <label for="toggleLink">Inserir link de participação manualmente?</label>
+                        <label class="switch">
+                          <input type="checkbox" id="toggleLink" onchange="toggleLinkBox()">
+                          <span class="slider"></span>
+                        </label>
+                      </div>
+                      <div id="linkContainer">
+                        <input type="url" id="link" placeholder="https://teams.microsoft.com/...">
+                        <span class="description-text">Se "Teams reunião" estiver marcado, o link automático será usado no lugar deste.</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </section>
+              </section>
 
-      <!-- NOVO: Toggle "Teams reunião" -->
-      <div class="form-group">
-        <div class="toggle-wrapper" style="justify-content: flex-start; gap: 12px; margin-bottom: 8px;">
-          <span class="material-symbols-outlined" style="font-size: 24px;">videocam</span>
-          <label class="switch">
-            <input type="checkbox" id="isTeamsMeeting">
-            <span class="slider"></span>
-          </label>
-          <span style="font-weight: 600; font-size: 1rem; color: #1d2939;">Teams reunião</span>
-        </div>
-        <span class="description-text">Se ativado, o Power Automate irá gerar automaticamente o link da reunião online e enviá-lo para a Intranet.</span>
-      </div>
-
-      <div class="form-group">
-        <label for="descricaoEditor">Descrição do evento no Teams/Calendário <span class="req">*</span></label>
-        <div class="teams-editor" id="teamsEditor">
+              <section class="wizard-panel" data-wizard-step="2" hidden>
+              <section class="event-descriptions" aria-label="Descrições do evento">
+                <div class="event-section-heading event-descriptions-heading">
+                  <h3>Descrições</h3>
+                  <p>Informe o conteúdo para o calendário e para a publicação.</p>
+                </div>
+                <div class="form-group">
+                  <label for="descricaoEditor">Descrição do evento no Teams/Calendário <span class="req">*</span></label>
+                  <div class="teams-editor" id="teamsEditor">
           
           <!-- Área de Digitação -->
           <div class="te-attachment-area" id="attachmentArea" hidden>
@@ -164,38 +335,84 @@
         </div>
       </div>
 
-      <div class="form-group">
-        <label for="descricaoWordPress">Descrição do anúncio no WordPress <span class="req">*</span></label>
-        <textarea id="descricaoWordPress" class="wp-description" rows="6" required placeholder="Escreva o texto que será publicado no anúncio do WordPress."></textarea>
-      </div>
+                <div class="form-group">
+                  <label for="descricaoWordPress">Descrição do anúncio no WordPress <span class="req">*</span></label>
+                  <textarea id="descricaoWordPress" class="wp-description" rows="6" required placeholder="Escreva o texto que será publicado no anúncio do WordPress."></textarea>
+                </div>
+              </section>
 
-      <!-- Toggle Switch para Link Manual da Intranet -->
-      <div class="form-group">
-        <div class="toggle-wrapper">
-          <label for="toggleLink" style="margin-bottom:0; cursor:pointer;">Inserir link de participação manualmente?</label>
-          <label class="switch">
-            <input type="checkbox" id="toggleLink" onchange="toggleLinkBox()">
-            <span class="slider"></span>
-          </label>
-        </div>
-        <div id="linkContainer">
-          <input type="url" id="link" placeholder="https://teams.microsoft.com/...">
-          <span class="description-text">Use caso seja um link externo (ex: Zoom, formulário externo, etc). Se "Teams reunião" estiver marcado acima, este campo será ignorado.</span>
-        </div>
-      </div>
+              </section>
 
-      <button id="btnEnviar" type="submit">Criar no Calendário & Publicar no Site</button>
+              <section class="wizard-panel" data-wizard-step="3" hidden>
+                <section class="event-review-section" aria-labelledby="reviewTitle">
+                  <div class="event-section-heading">
+                    <div class="event-review-heading">
+                      <span class="material-symbols-outlined" aria-hidden="true">calendar_month</span>
+                      <div>
+                        <h2 id="reviewTitle">Informações do evento</h2>
+                        <p>Confira os dados antes de criar o evento e publicar o anúncio.</p>
+                      </div>
+                    </div>
+                    <h3 class="event-review-title" data-review-value="titulo">—</h3>
+                  </div>
+                  <dl class="event-review-list">
+                    <div><dt>Data e horário</dt><dd data-review-value="dataHorario">—</dd></div>
+                    <div><dt>Local</dt><dd data-review-value="local">—</dd></div>
+                    <div><dt>Área responsável</dt><dd data-review-value="organizador">—</dd></div>
+                    <div><dt>Participantes</dt><dd data-review-value="participantes">—</dd></div>
+                    <div><dt>Reunião no Teams</dt><dd data-review-value="teams">—</dd></div>
+                    <div><dt>Link manual</dt><dd data-review-value="linkManual">—</dd></div>
+                    <div><dt>Lembrete</dt><dd data-review-value="lembrete">—</dd></div>
+                    <div><dt>Anexos</dt><dd data-review-value="anexos">Nenhum anexo</dd></div>
+                  </dl>
+                  <div class="event-review-descriptions">
+                    <div><h3>Descrição do calendário</h3><p data-review-value="descricaoTeams">—</p></div>
+                    <div><h3>Descrição do anúncio</h3><p data-review-value="descricaoWordPress">—</p></div>
+                  </div>
+                </section>
+                <div id="alertaDuplicado" class="warning-box">
+                  <p>⚠️ <strong>Atenção:</strong> Já existe um evento idêntico registrado com este mesmo título e data no WordPress e no Calendário.</p>
+                  <button type="button" class="btn-warning" onclick="publicarEvento(true)">Enviar mesmo assim (Forçar Reenvio)</button>
+                </div>
+                <div class="status-box">
+                  <p id="statusTeams">Teams/Calendário: Aguardando envio...</p>
+                  <p id="statusWP">WordPress: Aguardando envio...</p>
+                </div>
+              </section>
 
-      <!-- Alerta de Evento Já Existente -->
-      <div id="alertaDuplicado" class="warning-box">
-        <p>⚠️ <strong>Atenção:</strong> Já existe um evento idêntico registrado com este mesmo título e data no WordPress e no Calendário.</p>
-        <button type="button" class="btn-warning" onclick="publicarEvento(true)">Enviar mesmo assim (Forçar Reenvio)</button>
-      </div>
-    </form>
-
-    <div class="status-box">
-      <p id="statusTeams">Teams/Calendário: Aguardando envio...</p>
-      <p id="statusWP">WordPress: Aguardando envio...</p>
+              <div class="wizard-actions">
+                <button type="button" class="wizard-button wizard-button--back" id="wizardPrevious" hidden>Voltar</button>
+                <span class="wizard-actions-spacer"></span>
+                <button type="button" class="wizard-button wizard-button--next" id="wizardNext">Continuar <span class="material-symbols-outlined" aria-hidden="true">arrow_forward</span></button>
+                <button id="btnEnviar" type="submit" hidden>Criar no Calendário &amp; Publicar no Site</button>
+              </div>
+            </form>
+          </div>
+            <aside class="event-summary" aria-labelledby="eventSummaryTitle">
+              <div class="event-summary-heading">
+                <span class="material-symbols-outlined" aria-hidden="true">description</span>
+                <div><h2 id="eventSummaryTitle">Resumo do evento</h2><p>Veja um resumo das informações preenchidas.</p></div>
+              </div>
+              <div class="event-summary-title-card">
+                <strong data-summary-value="titulo">—</strong>
+                <span class="event-draft-badge">+ Em elaboração</span>
+              </div>
+              <dl class="event-summary-list">
+                <div><span class="material-symbols-outlined" aria-hidden="true">event</span><div><dt>Data e horário</dt><dd data-summary-value="dataHorario">—</dd></div></div>
+                <div><span class="material-symbols-outlined" aria-hidden="true">location_on</span><div><dt>Local</dt><dd data-summary-value="local">—</dd></div></div>
+                <div><span class="material-symbols-outlined" aria-hidden="true">groups</span><div><dt>Área responsável</dt><dd data-summary-value="organizador">—</dd></div></div>
+                <div><span class="material-symbols-outlined" aria-hidden="true">person</span><div><dt>Participantes</dt><dd data-summary-value="participantes">—</dd></div></div>
+                <div><span class="material-symbols-outlined" aria-hidden="true">videocam</span><div><dt>Reunião no Teams</dt><dd data-summary-value="teams">—</dd></div></div>
+                <div><span class="material-symbols-outlined" aria-hidden="true">notifications</span><div><dt>Lembrete</dt><dd data-summary-value="lembrete">—</dd></div></div>
+              </dl>
+              <div class="event-summary-note">
+                <span class="material-symbols-outlined" aria-hidden="true">info</span>
+                <p id="eventSummaryNote">As informações de publicação serão definidas na próxima etapa.</p>
+              </div>
+            </aside>
+          </div>
+        </section>
+      </main>
     </div>
   </div>
 
@@ -209,6 +426,7 @@
     <div class="te-preview-content" id="attachmentPreviewContent"></div>
   </dialog>
 
-  <script src="/js/app.js?v=20261015-attachments-v2" defer></script>
+  <div class="toast-stack" id="toastStack" aria-live="polite" aria-atomic="false"></div>
+  <script src="/js/app.js?v=20261016-speakers-v5" defer></script>
 </body>
 </html>

@@ -1,4 +1,530 @@
 // --- Lógica do Editor Estilo Teams ---
+    const dashboardView = document.getElementById('dashboardView');
+    const eventView = document.getElementById('eventView');
+    const developmentView = document.getElementById('developmentView');
+    let currentView = 'dashboard';
+    let previousView = 'dashboard';
+
+    function showView(view) {
+      const views = {
+        dashboard: dashboardView,
+        event: eventView,
+        development: developmentView
+      };
+      Object.entries(views).forEach(([name, element]) => {
+        element.hidden = name !== view;
+      });
+      document.body.classList.toggle('development-page-active', view === 'development');
+      document.querySelectorAll('.nav-item').forEach(item => {
+        const isActive = item.dataset.viewLink === view;
+        item.classList.toggle('is-active', isActive);
+        if (isActive) item.setAttribute('aria-current', 'page');
+        else item.removeAttribute('aria-current');
+      });
+      currentView = view;
+      views[view].querySelector('h1').focus();
+    }
+
+    document.querySelectorAll('[data-view-link]:not(#eventBackButton)').forEach(link => {
+      link.addEventListener('click', event => {
+        event.preventDefault();
+        const view = link.dataset.viewLink;
+        if (view === currentView) return;
+        previousView = currentView;
+        showView(view);
+      });
+    });
+    document.getElementById('developmentPreviousButton').addEventListener('click', () => {
+      const destination = previousView;
+      previousView = currentView;
+      showView(destination);
+    });
+
+    const wizardForm = document.getElementById('formEvento');
+    const wizardPanels = Array.from(document.querySelectorAll('[data-wizard-step]'));
+    const wizardStepButtons = Array.from(document.querySelectorAll('[data-step-button]'));
+    const wizardPrevious = document.getElementById('wizardPrevious');
+    const wizardNext = document.getElementById('wizardNext');
+    const wizardSubmit = document.getElementById('btnEnviar');
+    const eventBackButton = document.getElementById('eventBackButton');
+    const eventPageTitle = document.getElementById('eventPageTitle');
+    const eventPageDescription = document.getElementById('eventPageDescription');
+    const toastStack = document.getElementById('toastStack');
+    const toastTimers = new WeakMap();
+    const participantInput = document.getElementById('participantesInput');
+    const participantValue = document.getElementById('participantes');
+    const participantChips = document.getElementById('participantesChips');
+    const eventDateInput = document.getElementById('dataEvento');
+    const eventDateButton = document.getElementById('dataEventoButton');
+    const eventDateLabel = document.getElementById('dataEventoLabel');
+    const eventDateCalendar = document.getElementById('dataEventoCalendar');
+    const eventDateDays = document.getElementById('datePickerDays');
+    const eventDateMonthLabel = document.getElementById('datePickerMonthLabel');
+    let participantEmails = participantValue.value.split(/[;,]/).map(email => email.trim()).filter(Boolean);
+    let datePickerMonth = new Date();
+    datePickerMonth.setDate(1);
+    let currentWizardStep = 1;
+    let highestAvailableWizardStep = 1;
+
+    function dateToISO(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    function formatEventDate(value) {
+      if (!value) return '';
+      const [year, month, day] = value.split('-').map(Number);
+      return new Intl.DateTimeFormat('pt-BR').format(new Date(year, month - 1, day));
+    }
+
+    function syncEventDateLabel() {
+      const formattedDate = formatEventDate(eventDateInput.value);
+      eventDateLabel.textContent = formattedDate || 'dd/mm/aaaa';
+      eventDateButton.setAttribute(
+        'aria-label',
+        formattedDate ? `Data do evento: ${formattedDate}` : 'Selecionar data do evento'
+      );
+      eventDateButton.classList.toggle('has-value', Boolean(eventDateInput.value));
+      eventDateButton.removeAttribute('aria-invalid');
+    }
+
+    function renderDatePicker() {
+      const year = datePickerMonth.getFullYear();
+      const month = datePickerMonth.getMonth();
+      const todayValue = dateToISO(new Date());
+      const selectedValue = eventDateInput.value;
+      const firstDay = new Date(year, month, 1);
+      const gridStart = new Date(year, month, 1 - ((firstDay.getDay() + 6) % 7));
+      const gridEnd = new Date(gridStart);
+      gridEnd.setDate(gridEnd.getDate() + 41);
+      const selectedDateInGrid = selectedValue && selectedValue >= dateToISO(gridStart) && selectedValue <= dateToISO(gridEnd);
+      const todayInGrid = todayValue >= dateToISO(gridStart) && todayValue <= dateToISO(gridEnd);
+      const focusValue = selectedDateInGrid ? selectedValue : todayInGrid ? todayValue : dateToISO(firstDay);
+      eventDateMonthLabel.textContent = new Intl.DateTimeFormat('pt-BR', {
+        month: 'long',
+        year: 'numeric'
+      }).format(firstDay);
+      eventDateDays.replaceChildren();
+
+      for (let index = 0; index < 42; index++) {
+        const date = new Date(gridStart);
+        date.setDate(gridStart.getDate() + index);
+        const dateValue = dateToISO(date);
+        const dayButton = document.createElement('button');
+        dayButton.type = 'button';
+        dayButton.className = 'date-picker-day';
+        dayButton.setAttribute('aria-label', new Intl.DateTimeFormat('pt-BR', {
+          dateStyle: 'full'
+        }).format(date));
+        dayButton.setAttribute('aria-pressed', String(dateValue === selectedValue));
+        dayButton.tabIndex = dateValue === focusValue ? 0 : -1;
+        dayButton.dataset.date = dateValue;
+        dayButton.textContent = String(date.getDate());
+        if (date.getMonth() !== month) dayButton.classList.add('is-outside-month');
+        if (dateValue === todayValue) dayButton.classList.add('is-today');
+        if (dateValue === selectedValue) dayButton.classList.add('is-selected');
+        eventDateDays.appendChild(dayButton);
+      }
+    }
+
+    function openDatePicker() {
+      if (eventDateInput.value) {
+        const [year, month] = eventDateInput.value.split('-').map(Number);
+        datePickerMonth = new Date(year, month - 1, 1);
+      } else {
+        datePickerMonth = new Date();
+        datePickerMonth.setDate(1);
+      }
+      renderDatePicker();
+      eventDateCalendar.hidden = false;
+      eventDateButton.setAttribute('aria-expanded', 'true');
+      const triggerRect = eventDateButton.getBoundingClientRect();
+      const calendarHeight = eventDateCalendar.offsetHeight;
+      eventDateCalendar.classList.toggle(
+        'is-above',
+        triggerRect.bottom + calendarHeight > window.innerHeight - 12 && triggerRect.top > calendarHeight + 12
+      );
+      eventDateCalendar.classList.toggle(
+        'is-right-aligned',
+        triggerRect.left + eventDateCalendar.offsetWidth > window.innerWidth - 12
+      );
+      const verticalOverflow = triggerRect.bottom + calendarHeight - (window.innerHeight - 12);
+      if (verticalOverflow > 0 && triggerRect.top <= calendarHeight + 12) {
+        const availableScroll = document.documentElement.scrollHeight - window.scrollY - window.innerHeight;
+        if (availableScroll > 0) {
+          window.scrollBy({
+            top: Math.min(verticalOverflow, availableScroll),
+            behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
+          });
+        }
+      }
+      const focusDate = eventDateDays.querySelector('.is-selected') || eventDateDays.querySelector('.is-today');
+      (focusDate || eventDateDays.querySelector('[tabindex="0"]'))?.focus({ preventScroll: true });
+    }
+
+    function closeDatePicker(restoreFocus = false) {
+      eventDateCalendar.hidden = true;
+      eventDateButton.setAttribute('aria-expanded', 'false');
+      if (restoreFocus) eventDateButton.focus();
+    }
+
+    function showToast(message, type = 'info') {
+      const toast = document.createElement('div');
+      toast.className = `app-toast app-toast--${type}`;
+      toast.setAttribute('role', type === 'error' ? 'alert' : 'status');
+
+      const icon = document.createElement('span');
+      icon.className = 'material-symbols-outlined app-toast-icon';
+      icon.setAttribute('aria-hidden', 'true');
+      icon.textContent = { error: 'error', success: 'check_circle', warning: 'warning', info: 'info' }[type] || 'info';
+
+      const text = document.createElement('p');
+      text.textContent = message;
+
+      const closeButton = document.createElement('button');
+      closeButton.type = 'button';
+      closeButton.className = 'app-toast-close';
+      closeButton.setAttribute('aria-label', 'Dispensar notificação');
+      closeButton.innerHTML = '<span class="material-symbols-outlined" aria-hidden="true">close</span>';
+      closeButton.addEventListener('click', () => dismissToast(toast));
+
+      toast.append(icon, text, closeButton);
+      toastStack.appendChild(toast);
+      requestAnimationFrame(() => toast.classList.add('is-visible'));
+      toastTimers.set(toast, window.setTimeout(() => dismissToast(toast), 5500));
+    }
+
+    function dismissToast(toast) {
+      if (!toast.isConnected || toast.classList.contains('is-leaving')) return;
+      window.clearTimeout(toastTimers.get(toast));
+      toast.classList.add('is-leaving');
+      window.setTimeout(() => toast.remove(), 240);
+    }
+
+    function renderParticipantChips() {
+      participantChips.replaceChildren();
+      participantEmails.forEach((email, index) => {
+        const chip = document.createElement('li');
+        chip.className = 'participant-chip';
+        const address = document.createElement('span');
+        address.textContent = email;
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.dataset.removeParticipant = String(index);
+        remove.setAttribute('aria-label', `Remover ${email}`);
+        remove.innerHTML = '<span class="material-symbols-outlined" aria-hidden="true">close</span>';
+        chip.append(address, remove);
+        participantChips.appendChild(chip);
+      });
+      participantValue.value = participantEmails.join('; ');
+      updateWizardReview();
+    }
+
+    function addParticipantEmails(rawValue) {
+      const submitted = rawValue.split(/[;,]/).map(email => email.trim()).filter(Boolean);
+      if (!submitted.length) return false;
+      const invalidEmail = submitted.find(email => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email));
+      if (invalidEmail) {
+        showToast(`"${invalidEmail}" não parece ser um e-mail válido.`, 'error');
+        return false;
+      }
+      const normalizedSubmitted = new Set();
+      const duplicateEmail = submitted.find(email => {
+        const normalized = email.toLowerCase();
+        if (normalizedSubmitted.has(normalized) || participantEmails.some(existing => existing.toLowerCase() === normalized)) return true;
+        normalizedSubmitted.add(normalized);
+        return false;
+      });
+      if (duplicateEmail) {
+        showToast(`O e-mail "${duplicateEmail}" já foi adicionado.`, 'warning');
+        return false;
+      }
+      participantEmails.push(...submitted);
+      renderParticipantChips();
+      return true;
+    }
+
+    function commitParticipantInput() {
+      const typedValue = participantInput.value.trim();
+      if (!typedValue) return;
+      if (addParticipantEmails(typedValue)) participantInput.value = '';
+    }
+
+    function getFieldLabel(field) {
+      return wizardForm.querySelector(`label[for="${field.id}"]`)?.textContent.replace('*', '').trim() || 'este campo';
+    }
+
+    function showFieldError(field, message) {
+      field.setAttribute('aria-invalid', 'true');
+      showToast(message, 'error');
+      if (field === eventDateInput) {
+        eventDateButton.setAttribute('aria-invalid', 'true');
+        eventDateButton.focus();
+      } else {
+        field.focus();
+      }
+    }
+
+    function setWizardStep(step) {
+      if (step > highestAvailableWizardStep || step < 1 || step > wizardPanels.length) return;
+      currentWizardStep = step;
+      wizardPanels.forEach(panel => {
+        panel.hidden = Number(panel.dataset.wizardStep) !== step;
+      });
+      wizardStepButtons.forEach(button => {
+        const buttonStep = Number(button.dataset.stepButton);
+        const isActive = buttonStep === step;
+        button.disabled = buttonStep > highestAvailableWizardStep;
+        button.classList.toggle('is-active', isActive);
+        button.classList.toggle('is-complete', buttonStep < step);
+        if (isActive) button.setAttribute('aria-current', 'step');
+        else button.removeAttribute('aria-current');
+      });
+      wizardPrevious.hidden = step === 1;
+      wizardNext.hidden = step === wizardPanels.length;
+      wizardSubmit.hidden = step !== wizardPanels.length;
+      const stepCopy = [
+        ['Criar evento', 'Preencha as informações do evento para que ele seja divulgado no calendário e no site da Fundação REFER.'],
+        ['Publicar evento', 'Configure as descrições do evento para o calendário e para o site da Fundação REFER.'],
+        ['Revisar evento', 'Confira todas as informações antes de publicar. Se algo precisar ser alterado, volte à etapa correspondente.']
+      ][step - 1];
+      eventPageTitle.textContent = stepCopy[0];
+      eventPageDescription.textContent = stepCopy[1];
+      eventBackButton.dataset.viewLink = step === 1 ? 'dashboard' : 'event';
+      eventBackButton.querySelector('#eventBackLabel').textContent = step === 1 ? 'Voltar ao painel' : 'Voltar ao evento';
+      eventBackButton.querySelector('.material-symbols-outlined').textContent = 'arrow_back';
+      document.getElementById('eventSummaryNote').textContent = [
+        'As informações de publicação serão definidas na próxima etapa.',
+        'As informações preenchidas serão conferidas na etapa de revisão.',
+        'Confira os dados antes de criar e publicar o evento.'
+      ][step - 1];
+      if (step === wizardPanels.length) updateWizardReview();
+    }
+
+    function validateWizardStep(step) {
+      const panel = wizardPanels.find(item => Number(item.dataset.wizardStep) === step);
+      if (step === 1) {
+        commitParticipantInput();
+        for (const field of panel.querySelectorAll('[required]')) {
+          if (!field.value.trim()) {
+            showFieldError(field, `Preencha ${getFieldLabel(field).toLowerCase()}.`);
+            return false;
+          }
+          if (!field.validity.valid) {
+            showFieldError(field, `Verifique o valor informado em ${getFieldLabel(field).toLowerCase()}.`);
+            return false;
+          }
+        }
+        if (!participantEmails.length) {
+          showFieldError(participantInput, 'Adicione pelo menos um e-mail válido para os participantes.');
+          return false;
+        }
+        const manualLink = document.getElementById('link');
+        if (document.getElementById('toggleLink').checked && manualLink.value && !manualLink.validity.valid) {
+          showFieldError(manualLink, 'Informe um link de participação válido.');
+          return false;
+        }
+      }
+      if (step === 2) {
+        const teamsDescription = document.getElementById('descricaoEditor');
+        if (!teamsDescription.innerText.trim()) {
+          showToast('Adicione a descrição do evento para o Teams/Calendário.', 'error');
+          teamsDescription.focus();
+          return false;
+        }
+        const wordpressDescription = document.getElementById('descricaoWordPress');
+        if (!wordpressDescription.value.trim()) {
+          showToast('Adicione a descrição do anúncio para o WordPress.', 'error');
+          wordpressDescription.focus();
+          return false;
+        }
+      }
+      return true;
+    }
+
+    function continueWizard() {
+      if (!validateWizardStep(currentWizardStep)) return;
+      highestAvailableWizardStep = Math.max(highestAvailableWizardStep, currentWizardStep + 1);
+      setWizardStep(currentWizardStep + 1);
+    }
+
+    function handleWizardSubmit(event) {
+      event.preventDefault();
+      if (currentWizardStep < wizardPanels.length) {
+        continueWizard();
+        return;
+      }
+      publicarEvento(false);
+    }
+
+    function updateWizardReview() {
+      const dateValue = document.getElementById('dataEvento').value;
+      const dateText = dateValue
+        ? new Intl.DateTimeFormat('pt-BR').format(new Date(`${dateValue}T12:00:00`))
+        : '—';
+      const startTime = document.getElementById('horaInicio').value;
+      const endTime = document.getElementById('horaTermino').value;
+      const dateAndTime = [dateText, [startTime, endTime].filter(Boolean).join(' – ')].filter(value => value !== '—' && value).join(' · ') || '—';
+      const reminder = document.getElementById('lembrete');
+      const fileNames = Array.from(document.querySelectorAll('#attachments [data-file-name]'))
+        .map(file => file.dataset.fileName);
+      const imageCount = document.querySelectorAll('#descricaoEditor .te-image-attachment').length;
+      const attachmentSummary = [...fileNames, ...(imageCount ? [`${imageCount} ${imageCount === 1 ? 'imagem' : 'imagens'}`] : [])].join(', ') || 'Nenhum anexo';
+      const participantSummary = participantEmails.length
+        ? `${participantEmails.length} ${participantEmails.length === 1 ? 'convidado' : 'convidados'}`
+        : '—';
+      const values = {
+        titulo: document.getElementById('titulo').value.trim() || '—',
+        dataHorario: dateAndTime,
+        local: document.getElementById('local').value.trim() || '—',
+        organizador: document.getElementById('organizador').value.trim() || '—',
+        teams: document.getElementById('isTeamsMeeting').checked ? 'Ativado' : 'Não ativado',
+        lembrete: reminder.selectedOptions[0].textContent,
+        anexos: attachmentSummary,
+        descricaoTeams: document.getElementById('descricaoEditor').innerText.trim() || '—',
+        descricaoWordPress: document.getElementById('descricaoWordPress').value.trim() || '—',
+        linkManual: document.getElementById('toggleLink').checked ? document.getElementById('link').value.trim() || 'Não informado' : 'Não informado'
+      };
+      Object.entries(values).forEach(([key, value]) => {
+        document.querySelectorAll(`[data-summary-value="${key}"], [data-review-value="${key}"]`)
+          .forEach(target => { target.textContent = value; });
+      });
+      document.querySelector('[data-summary-value="participantes"]').textContent = participantSummary;
+      document.querySelector('[data-review-value="participantes"]').textContent = participantEmails.join('; ') || '—';
+    }
+
+    participantInput.addEventListener('keydown', event => {
+      if (event.key === 'Enter' || event.key === ';' || event.key === ',') {
+        event.preventDefault();
+        commitParticipantInput();
+      } else if (event.key === 'Backspace' && !participantInput.value && participantEmails.length) {
+        participantEmails.pop();
+        renderParticipantChips();
+      }
+    });
+    participantInput.addEventListener('blur', commitParticipantInput);
+    participantInput.addEventListener('paste', event => {
+      const pastedText = event.clipboardData.getData('text');
+      if (!/[;,]/.test(pastedText)) return;
+      event.preventDefault();
+      addParticipantEmails(pastedText);
+    });
+    eventDateButton.addEventListener('click', () => {
+      if (eventDateCalendar.hidden) openDatePicker();
+      else closeDatePicker();
+    });
+    document.getElementById('datePickerPrevious').addEventListener('click', () => {
+      datePickerMonth.setMonth(datePickerMonth.getMonth() - 1);
+      renderDatePicker();
+      eventDateDays.querySelector('[tabindex="0"]')?.focus({ preventScroll: true });
+    });
+    document.getElementById('datePickerNext').addEventListener('click', () => {
+      datePickerMonth.setMonth(datePickerMonth.getMonth() + 1);
+      renderDatePicker();
+      eventDateDays.querySelector('[tabindex="0"]')?.focus({ preventScroll: true });
+    });
+    eventDateDays.addEventListener('click', event => {
+      const dayButton = event.target.closest('[data-date]');
+      if (!dayButton) return;
+      eventDateInput.value = dayButton.dataset.date;
+      syncEventDateLabel();
+      eventDateInput.dispatchEvent(new Event('input', { bubbles: true }));
+      eventDateInput.dispatchEvent(new Event('change', { bubbles: true }));
+      closeDatePicker(true);
+    });
+    document.getElementById('datePickerClear').addEventListener('click', () => {
+      eventDateInput.value = '';
+      syncEventDateLabel();
+      eventDateInput.dispatchEvent(new Event('input', { bubbles: true }));
+      eventDateInput.dispatchEvent(new Event('change', { bubbles: true }));
+      closeDatePicker(true);
+    });
+    document.getElementById('datePickerToday').addEventListener('click', () => {
+      eventDateInput.value = dateToISO(new Date());
+      syncEventDateLabel();
+      eventDateInput.dispatchEvent(new Event('input', { bubbles: true }));
+      eventDateInput.dispatchEvent(new Event('change', { bubbles: true }));
+      closeDatePicker(true);
+    });
+    eventDateInput.addEventListener('change', syncEventDateLabel);
+    eventDateCalendar.addEventListener('keydown', event => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closeDatePicker(true);
+        return;
+      }
+      const dayButton = event.target.closest('[data-date]');
+      if (!dayButton) return;
+      const nextDate = new Date(`${dayButton.dataset.date}T12:00:00`);
+      const movement = {
+        ArrowLeft: -1,
+        ArrowRight: 1,
+        ArrowUp: -7,
+        ArrowDown: 7
+      }[event.key];
+      if (movement) {
+        event.preventDefault();
+        nextDate.setDate(nextDate.getDate() + movement);
+      } else if (event.key === 'PageUp' || event.key === 'PageDown') {
+        event.preventDefault();
+        const dayOfMonth = nextDate.getDate();
+        nextDate.setDate(1);
+        nextDate.setMonth(nextDate.getMonth() + (event.key === 'PageUp' ? -1 : 1));
+        nextDate.setDate(Math.min(dayOfMonth, new Date(nextDate.getFullYear(), nextDate.getMonth() + 1, 0).getDate()));
+      } else {
+        return;
+      }
+      datePickerMonth = new Date(nextDate.getFullYear(), nextDate.getMonth(), 1);
+      renderDatePicker();
+      eventDateDays.querySelector(`[data-date="${dateToISO(nextDate)}"]`)?.focus({ preventScroll: true });
+    });
+    document.addEventListener('click', event => {
+      if (!eventDateCalendar.hidden && !event.target.closest('.date-picker')) closeDatePicker();
+    });
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape' && !eventDateCalendar.hidden) closeDatePicker(true);
+    });
+    participantChips.addEventListener('click', event => {
+      const removeButton = event.target.closest('[data-remove-participant]');
+      if (!removeButton) return;
+      participantEmails.splice(Number(removeButton.dataset.removeParticipant), 1);
+      renderParticipantChips();
+      participantInput.focus();
+    });
+    wizardForm.addEventListener('input', event => {
+      event.target.removeAttribute('aria-invalid');
+      if (event.target === eventDateInput) syncEventDateLabel();
+      if (event.target === participantInput) {
+        const pending = participantInput.value;
+        if (/[;,]$/.test(pending)) commitParticipantInput();
+      }
+      updateWizardReview();
+    });
+    wizardForm.addEventListener('change', event => {
+      event.target.removeAttribute('aria-invalid');
+      updateWizardReview();
+    });
+    wizardNext.addEventListener('click', continueWizard);
+    wizardPrevious.addEventListener('click', () => setWizardStep(currentWizardStep - 1));
+    wizardStepButtons.forEach(button => {
+      button.addEventListener('click', () => setWizardStep(Number(button.dataset.stepButton)));
+    });
+    eventBackButton.addEventListener('click', event => {
+      event.preventDefault();
+      if (currentWizardStep > 1) {
+        setWizardStep(1);
+        return;
+      }
+      previousView = currentView;
+      showView('dashboard');
+    });
+    renderParticipantChips();
+    syncEventDateLabel();
+    setWizardStep(currentWizardStep);
+    updateWizardReview();
+
     let savedEditorRange = null;
     let pendingFileReads = [];
     let selectedImageAttachment = null;
@@ -221,7 +747,7 @@
         });
         reader.addEventListener('error', () => {
           node.remove();
-          alert(`Não foi possível ${options.action} "${file.name}".`);
+          showToast(`Não foi possível ${options.action} "${file.name}".`, 'error');
           resolve();
         });
         reader.addEventListener('abort', resolve);
@@ -627,12 +1153,12 @@
       const descricaoTeamsTexto = descricaoEditor.innerText.trim();
       const descricaoWordPressTexto = document.getElementById('descricaoWordPress').value.trim();
       if (!descricaoTeamsTexto) {
-        alert("Adicione a descrição do evento para o Teams/Calendário.");
+        showToast('Adicione a descrição do evento para o Teams/Calendário.', 'error');
         descricaoEditor.focus();
         return;
       }
       if (!descricaoWordPressTexto) {
-        alert("Adicione a descrição do anúncio para o WordPress.");
+        showToast('Adicione a descrição do anúncio para o WordPress.', 'error');
         document.getElementById('descricaoWordPress').focus();
         return;
       }
@@ -678,6 +1204,7 @@
               alertaDuplicado.style.display = 'block';
               statusWP.innerText = "WordPress: ⚠️ Envio suspenso (Evento idêntico detectado).";
               statusTeams.innerText = "Teams/Calendário: ⚠️ Envio suspenso (Evento idêntico detectado).";
+              showToast('Já existe um evento com este título e data. Revise os dados antes de reenviar.', 'warning');
               btn.disabled = false;
               return;
             }
@@ -728,13 +1255,16 @@
           }
         } else {
           statusTeams.innerText = `Teams/Calendário: ❌ Erro HTTP ${respTeams.status}`;
+          showToast(`Não foi possível criar o evento no Teams/Calendário (HTTP ${respTeams.status}).`, 'error');
         }
       } catch (e) {
         statusTeams.innerText = "Teams/Calendário: ❌ Erro: " + e.message;
+        showToast('Não foi possível conectar ao Teams/Calendário.', 'error');
       }
 
       if (anexosTeams.length && !teamsSucceeded) {
         statusWP.innerText = "WordPress: publicação cancelada porque o Teams/Calendário não confirmou o envio dos anexos.";
+        showToast('A publicação foi interrompida porque o envio dos anexos ao Teams/Calendário não foi confirmado.', 'error');
         btn.disabled = false;
         return;
       }
@@ -769,12 +1299,15 @@
         if (respWP.ok) {
           const dadosPost = await respWP.json();
           statusWP.innerText = `WordPress: ✅ Evento publicado na agenda! (ID: ${dadosPost.id})`;
+          showToast('Evento publicado com sucesso no site.', 'success');
         } else {
           const erro = await respWP.json();
           statusWP.innerText = `WordPress: ❌ Erro (${respWP.status}): ${erro.message || 'Falha ao salvar'}`;
+          showToast(`Não foi possível publicar o evento no site (HTTP ${respWP.status}).`, 'error');
         }
       } catch (e) {
         statusWP.innerText = "WordPress: ❌ Erro de conexão/CORS: " + e.message;
+        showToast('Não foi possível conectar ao WordPress para publicar o evento.', 'error');
       } finally {
         btn.disabled = false;
       }
