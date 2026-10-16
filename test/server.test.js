@@ -65,7 +65,7 @@ test('does not claim to send attachments until Teams flow support is enabled', a
     body: JSON.stringify({ attachments: [{ name: 'documento.pdf' }] })
   });
   assert.equal(response.status, 503);
-  assert.match((await response.json()).message, /ainda não está configurado/);
+  assert.match((await response.json()).message, /salvamento no SharePoint e os links no evento/);
 });
 
 test('forwards Teams requests through the server without requiring browser credentials', async t => {

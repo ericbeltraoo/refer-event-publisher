@@ -120,7 +120,7 @@ function createServer(options = {}) {
 
       if (Array.isArray(payload.attachments) && payload.attachments.length > 0 && config.TEAMS_ATTACHMENTS_ENABLED !== 'true') {
         sendJson(response, 503, {
-          message: 'O fluxo do Teams/Calendário ainda não está configurado para anexar arquivos. Atualize o fluxo e habilite TEAMS_ATTACHMENTS_ENABLED.'
+          message: 'O fluxo do Teams/Calendário ainda não está configurado para processar documentos. Configure o salvamento no SharePoint e os links no evento antes de habilitar TEAMS_ATTACHMENTS_ENABLED.'
         });
         return;
       }
