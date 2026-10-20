@@ -1,11 +1,14 @@
 services:
   refer-event-publisher:
     build: .
-    env_file:
-      - .env
     environment:
       HOST: "0.0.0.0"
       PORT: "3000"
+      TEAMS_FLOW_URL: ${TEAMS_FLOW_URL:?Configure TEAMS_FLOW_URL nas variaveis da Stack}
+      WORDPRESS_URL: ${WORDPRESS_URL:?Configure WORDPRESS_URL nas variaveis da Stack}
+      WORDPRESS_USERNAME: ${WORDPRESS_USERNAME:?Configure WORDPRESS_USERNAME nas variaveis da Stack}
+      WORDPRESS_APP_PASSWORD: ${WORDPRESS_APP_PASSWORD:?Configure WORDPRESS_APP_PASSWORD nas variaveis da Stack}
+      TEAMS_ATTACHMENTS_ENABLED: ${TEAMS_ATTACHMENTS_ENABLED:-false}
     ports:
       - "3000:3000"
     restart: unless-stopped
