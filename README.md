@@ -35,6 +35,46 @@ Não são necessários pacotes npm externos.
 - A aplicação foi pensada para uso dentro da rede confiável da organização; não
   exponha a porta diretamente à internet.
 
+## Executar com Docker na máquina corporativa
+
+O desenvolvimento local continua usando `npm start`. Na máquina corporativa,
+execute o mesmo projeto em Docker Compose; não é necessário alternar os modos
+com uma variável `USE_DOCKER` no `.env`, pois o ambiente é determinado pelo
+comando usado para iniciar a aplicação.
+
+1. Instale Docker Engine com o plugin Compose na máquina corporativa e disponibilize
+   nela o projeto (por exemplo, clonando este repositório).
+2. Crie o `.env` nessa máquina a partir de `.env.example` e configure os valores
+   válidos de Power Automate e WordPress. Mantenha o `.env` privado; ele é carregado
+   pelo Compose no início e não é incluído na imagem Docker.
+3. Na pasta do projeto, inicie ou atualize o serviço:
+
+   ```sh
+   docker compose up -d --build
+   ```
+
+4. A aplicação escuta na porta `3000` do host. Se `172.16.1.141` estiver
+   configurado como endereço fixo/reservado dessa máquina, os usuários da rede
+   corporativa acessam `http://172.16.1.141:3000`.
+5. Libere a porta TCP 3000 apenas na rede corporativa conforme as regras de TI.
+   Não exponha a aplicação diretamente à internet.
+6. Para verificar o serviço e acompanhar erros:
+
+   ```sh
+   docker compose ps
+   docker compose logs -f refer-event-publisher
+   ```
+
+   Para parar o serviço:
+
+   ```sh
+   docker compose down
+   ```
+
+As variáveis `HOST=0.0.0.0` e `PORT=3000` já são aplicadas ao container pelo
+Compose. O mesmo `.env.example` serve de modelo para execução local e Docker;
+use um `.env` separado em cada máquina e não copie credenciais para a imagem.
+
 ## Organização
 
 ```text
@@ -44,6 +84,8 @@ Não são necessários pacotes npm externos.
 │   ├── js/app.js
 │   └── index.html
 ├── test/
+├── compose.yaml
+├── Dockerfile
 ├── .env.example
 ├── package.json
 └── server.js
