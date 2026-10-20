@@ -44,10 +44,15 @@ comando usado para iniciar a aplicação.
 
 1. Instale Docker Engine com o plugin Compose na máquina corporativa e disponibilize
    nela o projeto (por exemplo, clonando este repositório).
-2. Crie o `.env` nessa máquina a partir de `.env.example` e configure os valores
-   válidos de Power Automate e WordPress. Mantenha o `.env` privado; ele é carregado
-   pelo Compose no início e não é incluído na imagem Docker.
-3. Na pasta do projeto, inicie ou atualize o serviço:
+2. Configure `TEAMS_FLOW_URL`, `WORDPRESS_URL`, `WORDPRESS_USERNAME` e
+   `WORDPRESS_APP_PASSWORD` como variáveis de ambiente da Stack no Portainer. Se
+   usar o terminal em vez do Portainer, crie um `.env` privado nessa pasta com
+   esses valores, usando `.env.example` como modelo. Não coloque credenciais no
+   repositório nem na imagem Docker. `TEAMS_ATTACHMENTS_ENABLED` é opcional e
+   assume `false` se não for definida.
+3. No Portainer, implante a Stack pelo Git usando `compose.yaml` e cadastre as
+   variáveis de ambiente na configuração da Stack. No terminal, na pasta do
+   projeto, inicie ou atualize o serviço:
 
    ```sh
    docker compose up -d --build
