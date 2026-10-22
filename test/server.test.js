@@ -68,6 +68,144 @@ test('does not claim to send attachments until Teams flow support is enabled', a
   assert.match((await response.json()).message, /salvamento no SharePoint e os links no evento/);
 });
 
+test('requires the speaker management flow to be configured', async t => {
+  const server = createServer({ config: {} });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  t.after(() => new Promise(resolve => server.close(resolve)));
+
+  const address = server.address();
+  const response = await fetch(`http://127.0.0.1:${address.port}/api/speakers`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'list' })
+  });
+  assert.equal(response.status, 503);
+  assert.match((await response.json()).message, /SPEAKERS_FLOW_URL/);
+});
+
+test('routes management resources through one Power Automate flow', async t => {
+  const forwardedPayloads = [];
+  const upstream = http.createServer((request, response) => {
+    const chunks = [];
+    request.on('data', chunk => chunks.push(chunk));
+    request.on('end', () => {
+      forwardedPayloads.push(JSON.parse(Buffer.concat(chunks).toString('utf8')));
+      response.writeHead(200, { 'Content-Type': 'application/json' });
+      response.end(JSON.stringify({ items: [] }));
+    });
+  });
+  await new Promise(resolve => upstream.listen(0, '127.0.0.1', resolve));
+  const upstreamAddress = upstream.address();
+  const server = createServer({
+    config: { MANAGEMENT_FLOW_URL: `http://127.0.0.1:${upstreamAddress.port}/flow` }
+  });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  t.after(async () => {
+    await Promise.all([
+      new Promise(resolve => server.close(resolve)),
+      new Promise(resolve => upstream.close(resolve))
+    ]);
+  });
+
+  const address = server.address();
+  for (const [endpoint, resource] of [
+    ['/api/speakers', 'speakers'],
+    ['/api/participations', 'participations']
+  ]) {
+    const response = await fetch(`http://127.0.0.1:${address.port}${endpoint}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'list' })
+    });
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), { items: [] });
+    assert.equal(forwardedPayloads.at(-1).resource, resource);
+    assert.equal(forwardedPayloads.at(-1).action, 'list');
+  }
+});
+
+test('rejects unsupported management operations before forwarding', async t => {
+  const server = createServer({ config: { SPEAKERS_FLOW_URL: 'https://example.invalid' } });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  t.after(() => new Promise(resolve => server.close(resolve)));
+
+  const address = server.address();
+  const response = await fetch(`http://127.0.0.1:${address.port}/api/speakers`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'run-anything' })
+  });
+  assert.equal(response.status, 400);
+  assert.match((await response.json()).message, /operação solicitada não é válida/);
+});
+
+test('rejects incomplete speaker and calendar management requests', async t => {
+  const server = createServer({
+    config: {
+      SPEAKERS_FLOW_URL: 'https://example.invalid/speakers',
+      EVENTS_FLOW_URL: 'https://example.invalid/events'
+    }
+  });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  t.after(() => new Promise(resolve => server.close(resolve)));
+
+  const address = server.address();
+  const speakerResponse = await fetch(`http://127.0.0.1:${address.port}/api/speakers`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'create', item: { email: 'teste@refer.com.br' } })
+  });
+  assert.equal(speakerResponse.status, 400);
+  assert.match((await speakerResponse.json()).message, /nome do palestrante/);
+
+  const eventResponse = await fetch(`http://127.0.0.1:${address.port}/api/managed-events`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'delete', id: '42' })
+  });
+  assert.equal(eventResponse.status, 400);
+  assert.match((await eventResponse.json()).message, /ID do evento do Outlook/);
+});
+
+test('forwards speaker management requests to the configured Power Automate flow', async t => {
+  let forwardedPayload;
+  const upstream = http.createServer((request, response) => {
+    const chunks = [];
+    request.on('data', chunk => chunks.push(chunk));
+    request.on('end', () => {
+      forwardedPayload = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+      response.writeHead(200, { 'Content-Type': 'application/json' });
+      response.end(JSON.stringify({ id: '42' }));
+    });
+  });
+  await new Promise(resolve => upstream.listen(0, '127.0.0.1', resolve));
+  const upstreamAddress = upstream.address();
+  const server = createServer({
+    config: { SPEAKERS_FLOW_URL: `http://127.0.0.1:${upstreamAddress.port}/flow` }
+  });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  t.after(async () => {
+    await Promise.all([
+      new Promise(resolve => server.close(resolve)),
+      new Promise(resolve => upstream.close(resolve))
+    ]);
+  });
+
+  const address = server.address();
+  const payload = {
+    action: 'create',
+    item: { nome: 'Palestrante de teste', email: 'teste@refer.com.br' }
+  };
+  const response = await fetch(`http://127.0.0.1:${address.port}/api/speakers`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  assert.equal(response.status, 200);
+  assert.deepEqual(forwardedPayload, payload);
+  assert.deepEqual(await response.json(), { id: '42' });
+});
+
 test('forwards Teams requests through the server without requiring browser credentials', async t => {
   let forwardedPayload;
   const upstream = http.createServer((request, response) => {

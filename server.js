@@ -6,6 +6,11 @@ const ROOT_DIR = __dirname;
 const PUBLIC_DIR = path.join(ROOT_DIR, 'public');
 const MAX_REQUEST_BYTES = 100 * 1024 * 1024;
 const MAX_RESPONSE_BYTES = 25 * 1024 * 1024;
+const MANAGEMENT_FLOWS = new Map([
+  ['/api/speakers', { configName: 'SPEAKERS_FLOW_URL', resource: 'speakers', actions: ['list', 'create', 'update', 'delete'] }],
+  ['/api/participations', { configName: 'PARTICIPATIONS_FLOW_URL', resource: 'participations', actions: ['list', 'replaceForSpeaker'] }],
+  ['/api/managed-events', { configName: 'EVENTS_FLOW_URL', resource: 'events', actions: ['list', 'sync', 'create', 'update', 'delete'] }]
+]);
 
 const MIME_TYPES = new Map([
   ['.css', 'text/css; charset=utf-8'],
@@ -129,6 +134,89 @@ function createServer(options = {}) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body
+      });
+      return;
+    }
+
+    const managementFlow = MANAGEMENT_FLOWS.get(requestUrl.pathname);
+    if (managementFlow) {
+      if (request.method !== 'POST') {
+        response.setHeader('Allow', 'POST');
+        sendJson(response, 405, { message: 'Método não permitido.' });
+        return;
+      }
+
+      const unifiedManagementFlow = Boolean(config.MANAGEMENT_FLOW_URL);
+      const flowUrl = unifiedManagementFlow
+        ? config.MANAGEMENT_FLOW_URL
+        : config[managementFlow.configName];
+      const missing = flowUrl ? [] : [managementFlow.configName];
+      if (missing.length) {
+        sendJson(response, 503, {
+          message: `Configure ${missing.join(', ')} para habilitar esta área.`
+        });
+        return;
+      }
+
+      let body;
+      let payload;
+      try {
+        body = await readRequestBody(request);
+        payload = JSON.parse(body.toString('utf8'));
+      } catch (error) {
+        sendJson(response, error.statusCode || 400, {
+          message: error.statusCode ? error.message : 'O corpo enviado não contém JSON válido.'
+        });
+        return;
+      }
+
+      if (!payload || typeof payload !== 'object' || Array.isArray(payload) ||
+          !managementFlow.actions.includes(payload.action)) {
+        sendJson(response, 400, { message: 'A operação solicitada não é válida para este recurso.' });
+        return;
+      }
+
+      if (['update', 'delete'].includes(payload.action) && !String(payload.id || '').trim()) {
+        sendJson(response, 400, { message: 'Informe o identificador do registro para esta operação.' });
+        return;
+      }
+
+      if (['create', 'update'].includes(payload.action) &&
+          (!payload.item || typeof payload.item !== 'object' || Array.isArray(payload.item))) {
+        sendJson(response, 400, { message: 'Informe os dados do registro.' });
+        return;
+      }
+
+      if (requestUrl.pathname === '/api/speakers' &&
+          ['create', 'update'].includes(payload.action) &&
+          !String(payload.item.nome || '').trim()) {
+        sendJson(response, 400, { message: 'Informe o nome do palestrante.' });
+        return;
+      }
+
+      if (requestUrl.pathname === '/api/participations' &&
+          payload.action === 'replaceForSpeaker' &&
+          (!String(payload.speakerId || '').trim() ||
+           !Array.isArray(payload.eventIds) ||
+           payload.eventIds.some(id => !String(id).trim()))) {
+        sendJson(response, 400, { message: 'Informe o palestrante e uma lista válida de IDs de eventos.' });
+        return;
+      }
+
+      if (requestUrl.pathname === '/api/managed-events' &&
+          ['update', 'delete'].includes(payload.action) &&
+          !(payload.outlookEventId || payload.item?.outlookEventId)) {
+        sendJson(response, 400, { message: 'Informe o ID do evento do Outlook para esta operação.' });
+        return;
+      }
+
+      const forwardedBody = unifiedManagementFlow
+        ? JSON.stringify({ ...payload, resource: managementFlow.resource })
+        : body;
+      await proxyRequest(response, flowUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: forwardedBody
       });
       return;
     }

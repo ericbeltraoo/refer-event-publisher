@@ -427,6 +427,160 @@ button:disabled { background: #aab6c4; box-shadow: none; transform: none; }
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
 }
 
+.management-view {
+  width: min(100%, 1180px);
+  margin: 0 auto;
+  padding: 22px 0 42px;
+}
+.management-view .page-heading { margin-bottom: 22px; }
+.management-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: 18px;
+  width: min(100%, 760px);
+  margin: 0 auto;
+}
+.management-actions .category-card { width: 100%; }
+.management-tabs {
+  display: flex;
+  gap: 8px;
+  margin: 0 0 16px;
+  border-bottom: 1px solid #d8e0ea;
+}
+.management-tab {
+  padding: 12px 16px;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  background: transparent;
+  color: #475467;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+}
+.management-tab.is-active {
+  border-bottom-color: #1769aa;
+  color: #12558b;
+}
+.management-panel {
+  margin: 0 0 18px;
+  padding: 24px;
+  border: 1px solid #e0e5eb;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 2px 7px rgba(16, 24, 40, .06);
+}
+.management-panel h2,
+.management-dialog h2 {
+  margin: 0;
+  color: #183b63;
+  font-size: 1.2rem;
+}
+.management-panel-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+.management-panel-heading p {
+  margin: 5px 0 0;
+  color: #667085;
+}
+.management-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 18px;
+}
+.management-form > label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.management-form input,
+.management-form select {
+  width: 100%;
+  min-height: 42px;
+  padding: 9px 11px;
+  border: 1px solid #cfd8e3;
+  border-radius: 6px;
+  background: #fff;
+  color: #1d2939;
+  font: inherit;
+}
+.management-form select[multiple] { min-height: 126px; }
+.management-form small { color: #667085; font-weight: 400; }
+.management-field--wide,
+.management-form-actions,
+.management-form > h2 { grid-column: 1 / -1; }
+.management-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+.management-feedback {
+  min-height: 1.4em;
+  margin: 12px 0;
+  color: #475467;
+}
+.management-feedback.is-error { color: #b42318; }
+.management-table-wrap { width: 100%; overflow-x: auto; }
+.management-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+.management-table th,
+.management-table td {
+  padding: 12px 10px;
+  border-bottom: 1px solid #eaecf0;
+  vertical-align: top;
+}
+.management-table th {
+  color: #475467;
+  font-size: .84rem;
+  font-weight: 650;
+}
+.management-table td { color: #344054; }
+.management-row-actions { white-space: nowrap; }
+.management-action-button {
+  margin-right: 8px;
+  padding: 6px 10px;
+  border: 1px solid #b8c7d8;
+  border-radius: 5px;
+  background: #fff;
+  color: #12558b;
+  cursor: pointer;
+  font: inherit;
+  font-size: .86rem;
+}
+.management-action-button:hover { background: #eff6fc; }
+.management-action-button.is-danger { border-color: #f0b6b2; color: #b42318; }
+.management-dialog {
+  width: min(680px, calc(100vw - 32px));
+  max-height: min(90vh, 900px);
+  overflow-y: auto;
+  padding: 24px;
+  border: 0;
+  border-radius: 10px;
+  box-shadow: 0 18px 48px rgba(16, 24, 40, .25);
+}
+.management-dialog::backdrop { background: rgba(16, 24, 40, .5); }
+.management-dialog .management-form { margin-top: 0; }
+
+@media (max-width: 640px) {
+  .management-view { padding-top: 12px; }
+  .management-panel { padding: 17px 14px; }
+  .management-form { grid-template-columns: minmax(0, 1fr); }
+  .management-field--wide,
+  .management-form-actions,
+  .management-form > h2 { grid-column: 1; }
+  .management-panel-heading { align-items: flex-start; flex-direction: column; }
+  .management-tabs { overflow-x: auto; }
+  .management-tab { padding-right: 10px; padding-left: 10px; white-space: nowrap; }
+}
+
 body {
   min-height: 100vh;
   margin: 0;

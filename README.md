@@ -15,13 +15,84 @@ chamadas para os serviços externos sem enviar credenciais ao navegador.
 2. Preencha `TEAMS_FLOW_URL`, `WORDPRESS_USERNAME` e `WORDPRESS_APP_PASSWORD` com as
    configurações válidas da organização. Mantenha o arquivo `.env` privado.
 3. Ajuste `WORDPRESS_URL` se o ambiente WordPress for diferente.
-4. Instale e inicie a aplicação:
+4. Para habilitar cadastros de palestrantes e histórico de eventos, configure
+   `MANAGEMENT_FLOW_URL` com o endereço de um fluxo único ou configure separadamente
+   `SPEAKERS_FLOW_URL`, `PARTICIPATIONS_FLOW_URL` e `EVENTS_FLOW_URL`. Não publique
+   esses endereços no repositório.
+5. Instale e inicie a aplicação:
 
    ```powershell
    npm start
    ```
 
 Não são necessários pacotes npm externos.
+
+## Cadastros de palestrantes e histórico do calendário
+
+A interface mantém o conteúdo visual antigo de “Em desenvolvimento” em
+`#developmentPageTemplate` como modelo reutilizável. As telas de palestrantes,
+eventos e históricos usam componentes próprios e mantêm o padrão visual da intranet.
+
+As listas SharePoint usadas pelos fluxos devem estar no site
+`https://refer.sharepoint.com/sites/DocumentosdeEventos`:
+
+- `Palestrantes`: `Title`/Nome, `NomeProfissional`, `AreaDeAtuacao`,
+  `NumeroTelefone`, `Email`, `Instituicao` e `Localidade`.
+- `Eventos Palestrantes`: `Title`/Titulo, `DataApresentacao`,
+  `IndicacaoGratuidade`, `FaixaDeValor`, `FonteDeContato`, `StatusValidacao`,
+  `AreaResponsavel`, `Modalidade`, `DataHoraInicio`, `DataHoraFim`, `Local`,
+  `OutlookEventId`, `CalendarioOrganizador` e `LinkEvento`.
+- `Participacoes`: Lookup `Palestrante` para `Palestrantes` e Lookup `Evento`
+  para `Eventos Palestrantes`.
+
+O aplicativo pode chamar um único fluxo ou três fluxos independentes do Power
+Automate. Todos devem usar gatilho HTTP POST, validar a operação, usar o conector
+SharePoint conectado à conta autorizada e responder com JSON. Com `MANAGEMENT_FLOW_URL`,
+o servidor acrescenta `resource` ao corpo (`speakers`, `participations` ou `events`);
+o fluxo único deve encaminhar primeiro por `resource` e depois por `action`.
+
+- `SPEAKERS_FLOW_URL` (`/api/speakers`): recebe `{ "action": "list" }`;
+  `{ "action": "create", "item": { ...campos do palestrante } }`;
+  `{ "action": "update", "id": "...", "item": { ... } }`; ou
+  `{ "action": "delete", "id": "..." }`. Listas e gravações respondem
+  `{ "items": [...] }` ou, em create/update, `{ "id": "ID SharePoint" }`.
+- `PARTICIPATIONS_FLOW_URL` (`/api/participations`): recebe
+  `{ "action": "list" }` e responde `{ "items": [{ "speakerId": "...",
+  "eventId": "...", "eventTitle": "..." }] }`. Para salvar os vínculos recebe
+  `{ "action": "replaceForSpeaker", "speakerId": "...", "eventIds": ["..."] }`;
+  o fluxo deve substituir as linhas de participação desse palestrante e responder
+  `{ "success": true }`.
+- `EVENTS_FLOW_URL` (`/api/managed-events`): recebe `{ "action": "list" }` e
+  responde `{ "items": [...] }`; `{ "action": "sync" }` importa/atualiza o histórico
+  do calendário da Infra; `update` recebe `id` e `item`; `delete` recebe `id` e
+  `outlookEventId`. O fluxo deve sincronizar SharePoint e Outlook e responder JSON.
+  Cada evento retornado deve incluir `id`, `title`, `start`, `end`, `location`,
+  `organizer`, `outlookEventId` e `organizerIsInfra` booleano. O frontend só exibe
+  editar/apagar quando `organizerIsInfra` for `true`.
+
+No modo de fluxo único, `resource` distingue operações cujo `action` se repete,
+como `list`. Exemplos: `{ "resource": "speakers", "action": "list" }`,
+`{ "resource": "participations", "action": "list" }` e
+`{ "resource": "events", "action": "list" }`. Os três grupos acima mantêm seus
+contratos de entrada e resposta.
+
+**Segurança da edição de eventos:** o fluxo deve buscar o item SharePoint pelo ID,
+confirmar que `CalendarioOrganizador`/organizador é `infra@refer.com.br` e só então
+chamar Outlook **Update event (V4)** ou **Delete event (V2)** com o ID do evento.
+Não confie apenas no booleano enviado pelo navegador. Eventos de terceiros devem
+permanecer somente para consulta. A atualização do calendário e da lista deve falhar
+explicitamente se qualquer lado falhar; não retorne sucesso parcial.
+
+Para importar histórico, use **Get calendar view of events (V3)** na caixa da Infra,
+paginação e janelas de tempo dentro dos limites do conector. Faça upsert pelo
+`OutlookEventId` para evitar duplicatas, e identifique o organizador real antes de
+marcar `organizerIsInfra`. O conector não representa necessariamente um histórico
+ilimitado: importe o período disponível e trate limites/erros no fluxo.
+
+O formulário existente `/api/teams` continua sendo independente e não é alterado por
+esses fluxos de gerenciamento. Até que `MANAGEMENT_FLOW_URL` ou `EVENTS_FLOW_URL`
+esteja configurada e o fluxo de sincronização tenha sido validado, o histórico
+novo não estará conectado ao Outlook.
 
 ## Acesso pela rede local
 
@@ -45,7 +116,10 @@ comando usado para iniciar a aplicação.
 1. Instale Docker Engine com o plugin Compose na máquina corporativa e disponibilize
    nela o projeto (por exemplo, clonando este repositório).
 2. Configure `TEAMS_FLOW_URL`, `WORDPRESS_URL`, `WORDPRESS_USERNAME` e
-   `WORDPRESS_APP_PASSWORD` como variáveis de ambiente da Stack no Portainer. Se
+   `WORDPRESS_APP_PASSWORD` como variáveis de ambiente da Stack no Portainer. Para
+   habilitar cadastros/histórico, configure `MANAGEMENT_FLOW_URL` para um fluxo único
+   ou `SPEAKERS_FLOW_URL`, `PARTICIPATIONS_FLOW_URL` e `EVENTS_FLOW_URL` para fluxos
+   separados. Se
    usar o terminal em vez do Portainer, crie um `.env` privado nessa pasta com
    esses valores, usando `.env.example` como modelo. Não coloque credenciais no
    repositório nem na imagem Docker. `TEAMS_ATTACHMENTS_ENABLED` é opcional e

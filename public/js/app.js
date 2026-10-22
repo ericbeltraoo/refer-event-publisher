@@ -1,7 +1,9 @@
 // --- Lógica do Editor Estilo Teams ---
     const dashboardView = document.getElementById('dashboardView');
     const eventView = document.getElementById('eventView');
-    const developmentView = document.getElementById('developmentView');
+    const eventCategoryView = document.getElementById('eventCategoryView');
+    const speakersView = document.getElementById('speakersView');
+    const eventHistoryView = document.getElementById('eventHistoryView');
     let currentView = 'dashboard';
     let previousView = 'dashboard';
 
@@ -9,20 +11,30 @@
       const views = {
         dashboard: dashboardView,
         event: eventView,
-        development: developmentView
+        eventCategory: eventCategoryView,
+        speakers: speakersView,
+        eventHistory: eventHistoryView
       };
+      if (!views[view]) return;
       Object.entries(views).forEach(([name, element]) => {
         element.hidden = name !== view;
       });
-      document.body.classList.toggle('development-page-active', view === 'development');
+      document.body.classList.remove('development-page-active');
       document.querySelectorAll('.nav-item').forEach(item => {
-        const isActive = item.dataset.viewLink === view;
+        const isActive = item.dataset.viewLink === view ||
+          (item.dataset.viewLink === 'eventCategory' && ['event', 'eventHistory'].includes(view));
         item.classList.toggle('is-active', isActive);
         if (isActive) item.setAttribute('aria-current', 'page');
         else item.removeAttribute('aria-current');
       });
       currentView = view;
       views[view].querySelector('h1').focus();
+      if (view === 'speakers') {
+        loadSpeakers();
+        loadEventChoices();
+      } else if (view === 'eventHistory') {
+        loadManagedEvents();
+      }
     }
 
     document.querySelectorAll('[data-view-link]:not(#eventBackButton)').forEach(link => {
@@ -34,11 +46,383 @@
         showView(view);
       });
     });
-    document.getElementById('developmentPreviousButton').addEventListener('click', () => {
-      const destination = previousView;
-      previousView = currentView;
-      showView(destination);
+    const speakerForm = document.getElementById('speakerForm');
+    const speakerHistoryRows = document.getElementById('speakerHistoryRows');
+    const speakerHistoryFeedback = document.getElementById('speakerHistoryFeedback');
+    const speakerFormFeedback = document.getElementById('speakerFormFeedback');
+    const speakerFormPanel = document.getElementById('speakerFormPanel');
+    const speakerHistoryPanel = document.getElementById('speakerHistoryPanel');
+    const speakerEventsSelect = document.getElementById('speakerEvents');
+    const eventHistoryRows = document.getElementById('eventHistoryRows');
+    const eventHistoryFeedback = document.getElementById('eventHistoryFeedback');
+    const eventEditDialog = document.getElementById('eventEditDialog');
+    let speakerRecords = [];
+    let eventRecords = [];
+    let participationRecords = [];
+
+    async function requestManagementFlow(endpoint, payload) {
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      let result;
+      try {
+        result = await response.json();
+      } catch {
+        throw new Error(`Resposta inválida do fluxo (HTTP ${response.status}).`);
+      }
+      if (!response.ok) {
+        throw new Error(result.message || `O fluxo retornou HTTP ${response.status}.`);
+      }
+      return result;
+    }
+
+    function fieldValue(id) {
+      return document.getElementById(id).value.trim();
+    }
+
+    function setSpeakerFeedback(message, isError = false) {
+      speakerHistoryFeedback.textContent = message;
+      speakerHistoryFeedback.classList.toggle('is-error', isError);
+    }
+
+    function setSpeakerFormFeedback(message, isError = false) {
+      speakerFormFeedback.textContent = message;
+      speakerFormFeedback.classList.toggle('is-error', isError);
+    }
+
+    function speakerEventIds(speaker) {
+      if (Array.isArray(speaker.eventIds)) return speaker.eventIds.map(String);
+      return participationRecords
+        .filter(row => String(row.speakerId) === String(speaker.id))
+        .map(row => String(row.eventId));
+    }
+
+    function renderSpeakerRows() {
+      speakerHistoryRows.replaceChildren();
+      for (const speaker of speakerRecords) {
+        const row = document.createElement('tr');
+        const eventsCell = document.createElement('td');
+        const linkedEvents = participationRecords
+          .filter(item => String(item.speakerId) === String(speaker.id))
+          .map(item => item.eventTitle || eventRecords.find(event => String(event.id) === String(item.eventId))?.title)
+          .filter(Boolean);
+        const eventsFromSpeaker = Array.isArray(speaker.events) ? speaker.events.map(item => item.title || item) : [];
+        const eventNames = [...new Set([...linkedEvents, ...eventsFromSpeaker])];
+        [
+          speaker.nome || '',
+          speaker.nomeProfissional || '',
+          speaker.email || '',
+          speaker.instituicao || ''
+        ].forEach(value => {
+          const cell = document.createElement('td');
+          cell.textContent = value;
+          row.appendChild(cell);
+        });
+        eventsCell.textContent = eventNames.length ? eventNames.join(', ') : 'Nenhum evento vinculado';
+        row.appendChild(eventsCell);
+        const actions = document.createElement('td');
+        actions.className = 'management-row-actions';
+        const editButton = document.createElement('button');
+        editButton.type = 'button';
+        editButton.className = 'management-action-button';
+        editButton.textContent = 'Editar';
+        editButton.addEventListener('click', () => editSpeaker(speaker));
+        const deleteButton = document.createElement('button');
+        deleteButton.type = 'button';
+        deleteButton.className = 'management-action-button is-danger';
+        deleteButton.textContent = 'Apagar';
+        deleteButton.addEventListener('click', () => deleteSpeaker(speaker));
+        actions.append(editButton, deleteButton);
+        row.appendChild(actions);
+        speakerHistoryRows.appendChild(row);
+      }
+    }
+
+    async function loadSpeakers() {
+      setSpeakerFeedback('Carregando palestrantes...');
+      try {
+        const [speakerResponse, participationResponse] = await Promise.all([
+          requestManagementFlow('/api/speakers', { action: 'list' }),
+          requestManagementFlow('/api/participations', { action: 'list' })
+        ]);
+        speakerRecords = Array.isArray(speakerResponse.items) ? speakerResponse.items : [];
+        participationRecords = Array.isArray(participationResponse.items) ? participationResponse.items : [];
+        renderSpeakerRows();
+        setSpeakerFeedback(`${speakerRecords.length} palestrante(s) carregado(s).`);
+        setSpeakerFormFeedback('');
+      } catch (error) {
+        setSpeakerFeedback(error.message, true);
+      }
+    }
+
+    async function loadEventChoices(selectedIds = []) {
+      try {
+        const result = await requestManagementFlow('/api/managed-events', { action: 'list' });
+        eventRecords = Array.isArray(result.items) ? result.items : [];
+        const selected = new Set(selectedIds.map(String));
+        speakerEventsSelect.replaceChildren();
+        for (const record of eventRecords) {
+          const option = document.createElement('option');
+          option.value = String(record.id);
+          option.textContent = record.title || record.titulo || '(Evento sem título)';
+          option.selected = selected.has(option.value);
+          speakerEventsSelect.appendChild(option);
+        }
+        if (!eventRecords.length) {
+          const option = document.createElement('option');
+          option.disabled = true;
+          option.textContent = 'Nenhum evento disponível no histórico';
+          speakerEventsSelect.appendChild(option);
+        }
+      } catch (error) {
+        speakerEventsSelect.replaceChildren();
+        const option = document.createElement('option');
+        option.disabled = true;
+        option.textContent = 'Não foi possível carregar os eventos';
+        speakerEventsSelect.appendChild(option);
+        setSpeakerFormFeedback(error.message, true);
+      }
+    }
+
+    function clearSpeakerForm() {
+      speakerForm.reset();
+      document.getElementById('speakerRecordId').value = '';
+      document.getElementById('speakerSaveButton').textContent = 'Salvar palestrante';
+      document.getElementById('speakerCancelEdit').hidden = true;
+      for (const option of speakerEventsSelect.options) option.selected = false;
+    }
+
+    function editSpeaker(speaker) {
+      document.getElementById('speakerRecordId').value = speaker.id;
+      document.getElementById('speakerName').value = speaker.nome || '';
+      document.getElementById('speakerProfessionalName').value = speaker.nomeProfissional || '';
+      document.getElementById('speakerArea').value = speaker.areaDeAtuacao || '';
+      document.getElementById('speakerPhone').value = speaker.numeroTelefone || '';
+      document.getElementById('speakerEmail').value = speaker.email || '';
+      document.getElementById('speakerInstitution').value = speaker.instituicao || '';
+      document.getElementById('speakerLocation').value = speaker.localidade || '';
+      document.getElementById('speakerSaveButton').textContent = 'Atualizar palestrante';
+      document.getElementById('speakerCancelEdit').hidden = false;
+      showSpeakerTab('form');
+      loadEventChoices(speakerEventIds(speaker));
+      document.getElementById('speakerName').focus();
+    }
+
+    async function deleteSpeaker(speaker) {
+      if (!window.confirm(`Apagar o cadastro de ${speaker.nome || 'palestrante'}? Os vínculos com eventos também serão removidos.`)) return;
+      try {
+        await requestManagementFlow('/api/speakers', { action: 'delete', id: String(speaker.id) });
+        await loadSpeakers();
+        showToast('Cadastro de palestrante apagado.', 'success');
+      } catch (error) {
+        setSpeakerFeedback(error.message, true);
+        showToast(error.message, 'error');
+      }
+    }
+
+    speakerForm.addEventListener('submit', async event => {
+      event.preventDefault();
+      if (!speakerForm.reportValidity()) return;
+      const id = fieldValue('speakerRecordId');
+      const item = {
+        nome: fieldValue('speakerName'),
+        nomeProfissional: fieldValue('speakerProfessionalName'),
+        areaDeAtuacao: fieldValue('speakerArea'),
+        numeroTelefone: fieldValue('speakerPhone'),
+        email: fieldValue('speakerEmail'),
+        instituicao: fieldValue('speakerInstitution'),
+        localidade: fieldValue('speakerLocation')
+      };
+      const eventIds = Array.from(speakerEventsSelect.selectedOptions).map(option => option.value);
+      const saveButton = document.getElementById('speakerSaveButton');
+      saveButton.disabled = true;
+      try {
+        const saved = await requestManagementFlow('/api/speakers', {
+          action: id ? 'update' : 'create',
+          ...(id ? { id } : {}),
+          item
+        });
+        const speakerId = String(saved.id || id || saved.item?.id || '');
+        if (!speakerId) throw new Error('O fluxo salvou o palestrante, mas não retornou o ID necessário para vincular eventos.');
+        await requestManagementFlow('/api/participations', {
+          action: 'replaceForSpeaker',
+          speakerId,
+          eventIds
+        });
+        clearSpeakerForm();
+        await Promise.all([loadSpeakers(), loadEventChoices()]);
+        setSpeakerFormFeedback('');
+        showToast('Cadastro de palestrante salvo.', 'success');
+      } catch (error) {
+        setSpeakerFormFeedback(error.message, true);
+        setSpeakerFeedback(error.message, true);
+        showToast(error.message, 'error');
+      } finally {
+        saveButton.disabled = false;
+      }
     });
+
+    function showSpeakerTab(tab) {
+      const showForm = tab === 'form';
+      speakerFormPanel.hidden = !showForm;
+      speakerHistoryPanel.hidden = showForm;
+      document.querySelectorAll('[data-speaker-tab]').forEach(button => {
+        const active = button.dataset.speakerTab === tab;
+        button.classList.toggle('is-active', active);
+        button.setAttribute('aria-selected', String(active));
+      });
+      if (!showForm) loadSpeakers();
+    }
+
+    document.querySelectorAll('[data-speaker-tab]').forEach(button => {
+      button.addEventListener('click', () => showSpeakerTab(button.dataset.speakerTab));
+    });
+    document.getElementById('speakerCancelEdit').addEventListener('click', clearSpeakerForm);
+    document.getElementById('refreshSpeakers').addEventListener('click', loadSpeakers);
+
+    function eventDateTime(event) {
+      const start = event.start || event.dataHoraInicio || '';
+      const end = event.end || event.dataHoraFim || '';
+      if (!start) return event.dataApresentacao || '';
+      const format = value => {
+        const date = new Date(value);
+        return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat('pt-BR', {
+          dateStyle: 'short',
+          timeStyle: 'short'
+        }).format(date);
+      };
+      return end ? `${format(start)} – ${format(end)}` : format(start);
+    }
+
+    function canManageCalendarEvent(record) {
+      return Boolean(record.id && record.outlookEventId && record.organizerIsInfra === true);
+    }
+
+    function renderEventRows() {
+      eventHistoryRows.replaceChildren();
+      for (const record of eventRecords) {
+        const row = document.createElement('tr');
+        [record.title || record.titulo || '', eventDateTime(record), record.location || record.local || '', record.organizer || record.calendarioOrganizador || ''].forEach(value => {
+          const cell = document.createElement('td');
+          cell.textContent = value;
+          row.appendChild(cell);
+        });
+        const actions = document.createElement('td');
+        actions.className = 'management-row-actions';
+        if (canManageCalendarEvent(record)) {
+          const editButton = document.createElement('button');
+          editButton.type = 'button';
+          editButton.className = 'management-action-button';
+          editButton.textContent = 'Editar';
+          editButton.addEventListener('click', () => openEventEdit(record));
+          const deleteButton = document.createElement('button');
+          deleteButton.type = 'button';
+          deleteButton.className = 'management-action-button is-danger';
+          deleteButton.textContent = 'Apagar';
+          deleteButton.addEventListener('click', () => deleteManagedEvent(record));
+          actions.append(editButton, deleteButton);
+        } else {
+          actions.textContent = 'Somente consulta';
+        }
+        row.appendChild(actions);
+        eventHistoryRows.appendChild(row);
+      }
+    }
+
+    async function loadManagedEvents(sync = false) {
+      eventHistoryFeedback.textContent = sync ? 'Sincronizando histórico do calendário...' : 'Carregando eventos...';
+      eventHistoryFeedback.classList.remove('is-error');
+      try {
+        if (sync) {
+          await requestManagementFlow('/api/managed-events', { action: 'sync' });
+        }
+        const result = await requestManagementFlow('/api/managed-events', { action: 'list' });
+        eventRecords = Array.isArray(result.items) ? result.items : [];
+        renderEventRows();
+        eventHistoryFeedback.textContent = `${eventRecords.length} evento(s) no histórico.`;
+        await loadEventChoices();
+      } catch (error) {
+        eventHistoryFeedback.textContent = error.message;
+        eventHistoryFeedback.classList.add('is-error');
+      }
+    }
+
+    function openEventEdit(record) {
+      document.getElementById('eventRecordId').value = record.id;
+      document.getElementById('managedEventTitle').value = record.title || record.titulo || '';
+      document.getElementById('managedEventDate').value = (record.dataApresentacao || '').slice(0, 10);
+      document.getElementById('managedEventStart').value = (record.start || record.dataHoraInicio || '').slice(0, 16);
+      document.getElementById('managedEventEnd').value = (record.end || record.dataHoraFim || '').slice(0, 16);
+      document.getElementById('managedEventLocation').value = record.location || record.local || '';
+      document.getElementById('managedEventFree').value = String(Boolean(record.indicacaoGratuidade));
+      document.getElementById('managedEventFee').value = record.faixaDeValor ?? '';
+      document.getElementById('managedEventContactSource').value = record.fonteDeContato || '';
+      document.getElementById('managedEventStatus').value = record.statusValidacao || 'AGUARDANDO_CONFIRMACAO';
+      document.getElementById('managedEventArea').value = record.areaResponsavel || 'GERIC';
+      document.getElementById('managedEventMode').value = record.modalidade || 'PRESENCIAL';
+      eventEditDialog.dataset.outlookEventId = record.outlookEventId;
+      eventEditDialog.showModal();
+    }
+
+    document.getElementById('closeEventEdit').addEventListener('click', () => eventEditDialog.close());
+    document.getElementById('eventEditForm').addEventListener('submit', async event => {
+      event.preventDefault();
+      const id = fieldValue('eventRecordId');
+      const record = eventRecords.find(item => String(item.id) === id);
+      if (!record || !canManageCalendarEvent(record)) {
+        eventHistoryFeedback.textContent = 'Este item não está identificado como evento organizado pela Infra; não é possível alterá-lo.';
+        eventHistoryFeedback.classList.add('is-error');
+        eventEditDialog.close();
+        return;
+      }
+      const item = {
+        ...record,
+        title: fieldValue('managedEventTitle'),
+        dataApresentacao: fieldValue('managedEventDate'),
+        start: fieldValue('managedEventStart'),
+        end: fieldValue('managedEventEnd'),
+        location: fieldValue('managedEventLocation'),
+        indicacaoGratuidade: document.getElementById('managedEventFree').value === 'true',
+        faixaDeValor: document.getElementById('managedEventFee').value
+          ? Number(document.getElementById('managedEventFee').value)
+          : null,
+        fonteDeContato: fieldValue('managedEventContactSource'),
+        statusValidacao: document.getElementById('managedEventStatus').value,
+        areaResponsavel: document.getElementById('managedEventArea').value,
+        modalidade: document.getElementById('managedEventMode').value,
+        outlookEventId: record.outlookEventId
+      };
+      try {
+        await requestManagementFlow('/api/managed-events', { action: 'update', id, item });
+        eventEditDialog.close();
+        await loadManagedEvents();
+        showToast('Evento atualizado no calendário e no histórico.', 'success');
+      } catch (error) {
+        eventHistoryFeedback.textContent = error.message;
+        eventHistoryFeedback.classList.add('is-error');
+      }
+    });
+
+    async function deleteManagedEvent(record) {
+      if (!canManageCalendarEvent(record)) return;
+      if (!window.confirm(`Excluir "${record.title || record.titulo || 'este evento'}" do calendário da Infra e do histórico?`)) return;
+      try {
+        await requestManagementFlow('/api/managed-events', {
+          action: 'delete',
+          id: String(record.id),
+          outlookEventId: record.outlookEventId
+        });
+        await loadManagedEvents();
+        showToast('Evento excluído do calendário e do histórico.', 'success');
+      } catch (error) {
+        eventHistoryFeedback.textContent = error.message;
+        eventHistoryFeedback.classList.add('is-error');
+      }
+    }
+
+    document.getElementById('refreshEvents').addEventListener('click', () => loadManagedEvents(true));
 
     const wizardForm = document.getElementById('formEvento');
     const wizardPanels = Array.from(document.querySelectorAll('[data-wizard-step]'));
@@ -306,8 +690,8 @@
       ][step - 1];
       eventPageTitle.textContent = stepCopy[0];
       eventPageDescription.textContent = stepCopy[1];
-      eventBackButton.dataset.viewLink = step === 1 ? 'dashboard' : 'event';
-      eventBackButton.querySelector('#eventBackLabel').textContent = step === 1 ? 'Voltar ao painel' : 'Voltar ao evento';
+      eventBackButton.dataset.viewLink = step === 1 ? 'eventCategory' : 'event';
+      eventBackButton.querySelector('#eventBackLabel').textContent = step === 1 ? 'Voltar aos eventos' : 'Voltar ao evento';
       eventBackButton.querySelector('.material-symbols-outlined').textContent = 'arrow_back';
       document.getElementById('eventSummaryNote').textContent = [
         'As informações de publicação serão definidas na próxima etapa.',
@@ -526,7 +910,7 @@
         return;
       }
       previousView = currentView;
-      showView('dashboard');
+      showView('eventCategory');
     });
     renderParticipantChips();
     syncEventDateLabel();
