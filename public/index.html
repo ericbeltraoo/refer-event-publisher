@@ -6,7 +6,7 @@
   <!-- Ícones Material Symbols usados pelas ferramentas do editor -->
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
 
-  <link rel="stylesheet" href="/css/styles.css?v=20261016-speakers-v21">
+  <link rel="stylesheet" href="/css/styles.css?v=20261022-management-v1">
 </head>
 <body>
 
@@ -22,11 +22,11 @@
           <span class="material-symbols-outlined" aria-hidden="true">home</span>
           <span>Painel</span>
         </button>
-        <button type="button" class="nav-item" data-view-link="event">
+        <button type="button" class="nav-item" data-view-link="eventCategory">
           <span class="material-symbols-outlined" aria-hidden="true">event_available</span>
-          <span>Criação de evento</span>
+          <span>Eventos</span>
         </button>
-        <button type="button" class="nav-item" data-view-link="development">
+        <button type="button" class="nav-item" data-view-link="speakers">
           <span class="material-symbols-outlined" aria-hidden="true">record_voice_over</span>
           <span>Cadastro Palestrantes</span>
         </button>
@@ -58,26 +58,162 @@
                 <h2 id="categoriesTitle">Ações disponíveis</h2>
               </div>
             </div>
-            <button type="button" class="category-card" data-view-link="event">
+            <button type="button" class="category-card" data-view-link="eventCategory">
               <span class="category-illustration" aria-hidden="true">
                 <span class="material-symbols-outlined">event_available</span>
               </span>
-              <span class="category-title">Criação de evento</span>
-              <span class="category-description">Agende um evento no calendário e prepare a publicação no site.</span>
-              <span class="category-action">Criar evento <span class="material-symbols-outlined" aria-hidden="true">arrow_forward</span></span>
+              <span class="category-title">Eventos</span>
+              <span class="category-description">Crie eventos e consulte o histórico completo do calendário.</span>
+              <span class="category-action">Abrir eventos <span class="material-symbols-outlined" aria-hidden="true">arrow_forward</span></span>
             </button>
-            <button type="button" class="category-card" data-view-link="development">
+            <button type="button" class="category-card" data-view-link="speakers">
               <span class="category-illustration" aria-hidden="true">
                 <span class="material-symbols-outlined">record_voice_over</span>
               </span>
               <span class="category-title">Cadastro Palestrantes</span>
-              <span class="category-description">Em breve, uma área para cadastrar e gerenciar palestrantes.</span>
-              <span class="category-action">Em desenvolvimento <span class="material-symbols-outlined" aria-hidden="true">arrow_forward</span></span>
+              <span class="category-description">Cadastre palestrantes e acompanhe os eventos em que participam.</span>
+              <span class="category-action">Abrir cadastro <span class="material-symbols-outlined" aria-hidden="true">arrow_forward</span></span>
             </button>
           </section>
         </section>
 
-        <section class="development-view" id="developmentView" aria-labelledby="developmentTitle" hidden>
+        <section class="management-view" id="eventCategoryView" aria-labelledby="eventCategoryTitle" hidden>
+          <div class="page-heading">
+            <button type="button" class="back-to-dashboard" data-view-link="dashboard">
+              <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+              <span>Voltar ao painel</span>
+            </button>
+            <h1 id="eventCategoryTitle" tabindex="-1">Eventos</h1>
+            <p>Crie eventos ou consulte o histórico completo do calendário.</p>
+          </div>
+          <div class="management-actions">
+            <button type="button" class="category-card" data-view-link="event">
+              <span class="category-illustration" aria-hidden="true"><span class="material-symbols-outlined">event_available</span></span>
+              <span class="category-title">Criar evento</span>
+              <span class="category-description">Agende no Calendário/Teams e, se desejar, publique no site.</span>
+              <span class="category-action">Abrir formulário <span class="material-symbols-outlined" aria-hidden="true">arrow_forward</span></span>
+            </button>
+            <button type="button" class="category-card" data-view-link="eventHistory">
+              <span class="category-illustration" aria-hidden="true"><span class="material-symbols-outlined">history</span></span>
+              <span class="category-title">Histórico de eventos</span>
+              <span class="category-description">Consulte eventos importados e gerencie os organizados pela Infra.</span>
+              <span class="category-action">Abrir histórico <span class="material-symbols-outlined" aria-hidden="true">arrow_forward</span></span>
+            </button>
+          </div>
+        </section>
+
+        <section class="management-view" id="speakersView" aria-labelledby="speakersTitle" hidden>
+          <div class="page-heading">
+            <button type="button" class="back-to-dashboard" data-view-link="dashboard">
+              <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+              <span>Voltar ao painel</span>
+            </button>
+            <h1 id="speakersTitle" tabindex="-1">Cadastro de palestrantes</h1>
+            <p>Cadastre palestrantes, associe-os a apresentações e consulte o histórico.</p>
+          </div>
+          <div class="management-tabs" role="tablist" aria-label="Cadastro de palestrantes">
+            <button type="button" class="management-tab is-active" role="tab" aria-selected="true" data-speaker-tab="form">Cadastrar palestrante</button>
+            <button type="button" class="management-tab" role="tab" aria-selected="false" data-speaker-tab="history">Histórico completo</button>
+          </div>
+          <section class="management-panel" id="speakerFormPanel" aria-labelledby="speakerFormTitle">
+            <h2 id="speakerFormTitle">Dados do palestrante</h2>
+            <p class="management-feedback" id="speakerFormFeedback" aria-live="polite"></p>
+            <form id="speakerForm" class="management-form">
+              <input type="hidden" id="speakerRecordId">
+              <label>Nome <span class="req">*</span><input id="speakerName" name="nome" type="text" required maxlength="255"></label>
+              <label>Nome profissional<input id="speakerProfessionalName" name="nomeProfissional" type="text" maxlength="255"></label>
+              <label>Área de atuação<input id="speakerArea" name="areaDeAtuacao" type="text" maxlength="255"></label>
+              <label>Telefone<input id="speakerPhone" name="numeroTelefone" type="text" maxlength="100"></label>
+              <label>E-mail profissional<input id="speakerEmail" name="email" type="email" maxlength="255"></label>
+              <label>Instituição<input id="speakerInstitution" name="instituicao" type="text" maxlength="255"></label>
+              <label>Localidade<input id="speakerLocation" name="localidade" type="text" maxlength="255"></label>
+              <label class="management-field--wide">Eventos/apresentações
+                <select id="speakerEvents" name="eventIds" multiple size="5" aria-describedby="speakerEventsHelp"></select>
+                <small id="speakerEventsHelp">Use Ctrl (Windows) ou Command (Mac) para selecionar mais de um evento.</small>
+              </label>
+              <div class="management-form-actions">
+                <button type="submit" class="wizard-submit-button" id="speakerSaveButton">Salvar palestrante</button>
+                <button type="button" class="wizard-button wizard-button--back" id="speakerCancelEdit" hidden>Cancelar edição</button>
+              </div>
+            </form>
+          </section>
+          <section class="management-panel" id="speakerHistoryPanel" aria-labelledby="speakerHistoryTitle" hidden>
+            <div class="management-panel-heading">
+              <div><h2 id="speakerHistoryTitle">Histórico completo de palestrantes</h2><p>Os eventos relacionados aparecem em cada cadastro.</p></div>
+              <button type="button" class="wizard-button wizard-button--next" id="refreshSpeakers">Atualizar lista</button>
+            </div>
+            <p class="management-feedback" id="speakerHistoryFeedback" aria-live="polite"></p>
+            <div class="management-table-wrap">
+              <table class="management-table">
+                <thead><tr><th>Nome</th><th>Nome profissional</th><th>E-mail</th><th>Instituição</th><th>Eventos</th><th>Ações</th></tr></thead>
+                <tbody id="speakerHistoryRows"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <section class="management-view" id="eventHistoryView" aria-labelledby="eventHistoryTitle" hidden>
+          <div class="page-heading">
+            <button type="button" class="back-to-dashboard" data-view-link="eventCategory">
+              <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+              <span>Voltar para Eventos</span>
+            </button>
+            <h1 id="eventHistoryTitle" tabindex="-1">Histórico completo de eventos</h1>
+            <p>Eventos do calendário da Infra. Edição e exclusão ficam disponíveis para eventos organizados pela Infra.</p>
+          </div>
+          <div class="management-panel">
+            <div class="management-panel-heading">
+              <div><h2>Eventos</h2><p>A atualização/importação do histórico é executada pelo fluxo conectado ao Outlook.</p></div>
+              <button type="button" class="wizard-button wizard-button--next" id="refreshEvents">Atualizar histórico</button>
+            </div>
+            <p class="management-feedback" id="eventHistoryFeedback" aria-live="polite"></p>
+            <div class="management-table-wrap">
+              <table class="management-table">
+                <thead><tr><th>Título</th><th>Data e horário</th><th>Local</th><th>Organizador</th><th>Ações</th></tr></thead>
+                <tbody id="eventHistoryRows"></tbody>
+              </table>
+            </div>
+          </div>
+          <dialog class="management-dialog" id="eventEditDialog" aria-labelledby="eventEditTitle">
+            <form id="eventEditForm" class="management-form">
+              <h2 id="eventEditTitle">Editar evento</h2>
+              <input type="hidden" id="eventRecordId">
+              <label>Título<input id="managedEventTitle" type="text" required maxlength="255"></label>
+              <label>Data da apresentação<input id="managedEventDate" type="date"></label>
+              <label>Início<input id="managedEventStart" type="datetime-local"></label>
+              <label>Término<input id="managedEventEnd" type="datetime-local"></label>
+              <label>Local<input id="managedEventLocation" type="text" maxlength="255"></label>
+              <label>Gratuidade
+                <select id="managedEventFree"><option value="false">Não</option><option value="true">Sim</option></select>
+              </label>
+              <label>Faixa de valor<input id="managedEventFee" type="number" min="0" step="0.01"></label>
+              <label>Fonte de contato<input id="managedEventContactSource" type="text" maxlength="255"></label>
+              <label>Status de validação
+                <select id="managedEventStatus">
+                  <option value="AGUARDANDO_CONFIRMACAO">Aguardando confirmação</option>
+                  <option value="CONFIRMADA">Confirmada</option>
+                  <option value="RECUSADA">Recusada</option>
+                </select>
+              </label>
+              <label>Área responsável
+                <select id="managedEventArea">
+                  <option value="GABIN_COMUNICACAO">GABIN_COMUNICACAO</option>
+                  <option value="GERIC">GERIC</option>
+                  <option value="GEPES">GEPES</option>
+                </select>
+              </label>
+              <label>Modalidade
+                <select id="managedEventMode"><option value="PRESENCIAL">Presencial</option><option value="EAD">EAD</option></select>
+              </label>
+              <div class="management-form-actions">
+                <button type="submit" class="wizard-submit-button">Salvar alterações</button>
+                <button type="button" class="wizard-button wizard-button--back" id="closeEventEdit">Cancelar</button>
+              </div>
+            </form>
+          </dialog>
+        </section>
+
+        <template id="developmentPageTemplate">
           <div class="development-content">
             <img
               class="development-illustration"
@@ -93,7 +229,7 @@
               <p class="development-support">Precisa de ajuda? Entre em contato com a equipe de suporte.</p>
             </div>
           </div>
-        </section>
+        </template>
 
         <section class="event-view" id="eventView" hidden>
           <div class="page-heading">
@@ -444,6 +580,6 @@
   </dialog>
 
   <div class="toast-stack" id="toastStack" aria-live="polite" aria-atomic="false"></div>
-  <script src="/js/app.js?v=20261016-speakers-v8" defer></script>
+  <script src="/js/app.js?v=20261022-management-v1" defer></script>
 </body>
 </html>
