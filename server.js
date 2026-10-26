@@ -1,6 +1,7 @@
 const fs = require('node:fs');
 const http = require('node:http');
 const path = require('node:path');
+const { createEventsWatcher } = require('./events-watcher');
 
 const ROOT_DIR = __dirname;
 const PUBLIC_DIR = path.join(ROOT_DIR, 'public');
@@ -81,6 +82,16 @@ function createServer(options = {}) {
   const config = options.config || process.env;
   const publicDir = options.publicDir || PUBLIC_DIR;
 
+  // Criado aqui (e não no topo do arquivo) porque o .env só é carregado em startServer().
+  // Mesma regra de escolha do fluxo usada na rota /api/managed-events abaixo.
+  const unifiedFlow = Boolean(config.MANAGEMENT_FLOW_URL);
+    const eventsWatcher = createEventsWatcher({
+    flowUrl: unifiedFlow ? config.MANAGEMENT_FLOW_URL : config.EVENTS_FLOW_URL,
+    includeResource: unifiedFlow,
+    intervalMs: Number(config.EVENTS_WATCH_INTERVAL_MS) || 30000,
+    debug: config.EVENTS_WATCH_DEBUG === 'true'
+  });
+
   return http.createServer(async (request, response) => {
     response.setHeader('X-Content-Type-Options', 'nosniff');
     response.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
@@ -95,6 +106,21 @@ function createServer(options = {}) {
       requestUrl = new URL(request.url, 'http://localhost');
     } catch {
       sendJson(response, 400, { message: 'Endereço da requisição inválido.' });
+      return;
+    }
+
+    // Aviso em tempo real: o navegador abre esta conexão e só recebe algo quando o histórico muda.
+    if (requestUrl.pathname === '/api/managed-events/stream') {
+      if (request.method !== 'GET') {
+        response.setHeader('Allow', 'GET');
+        sendJson(response, 405, { message: 'Método não permitido.' });
+        return;
+      }
+      if (!(unifiedFlow || config.EVENTS_FLOW_URL)) {
+        sendJson(response, 503, { message: 'Configure MANAGEMENT_FLOW_URL ou EVENTS_FLOW_URL para habilitar esta área.' });
+        return;
+      }
+      eventsWatcher.handleSse(request, response);
       return;
     }
 

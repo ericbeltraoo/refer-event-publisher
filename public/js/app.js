@@ -28,6 +28,8 @@
         else item.removeAttribute('aria-current');
       });
       currentView = view;
+      if (view === 'eventHistory') startEventAutoRefresh();
+     else stopEventAutoRefresh();
       views[view].querySelector('h1').focus();
       if (view === 'speakers') {
         loadSpeakers();
@@ -80,6 +82,90 @@
 
     function fieldValue(id) {
       return document.getElementById(id).value.trim();
+    }
+
+    function setButtonLoading(button, loading, loadingText = 'Carregando...') {
+      if (!button) return;
+      if (loading) {
+        button.dataset.originalLabel = button.textContent.trim();
+        button.disabled = true;
+        button.setAttribute('aria-busy', 'true');
+        button.classList.add('is-loading');
+        button.replaceChildren();
+        const spinner = document.createElement('span');
+        spinner.className = 'btn-spinner';
+        spinner.setAttribute('aria-hidden', 'true');
+        const label = document.createElement('span');
+        label.textContent = loadingText;
+        button.append(spinner, label);
+      } else {
+        button.disabled = false;
+        button.removeAttribute('aria-busy');
+        button.classList.remove('is-loading');
+        button.textContent = button.dataset.originalLabel || button.textContent;
+      }
+    }
+
+    function showConfirmDialog({ title, highlight = '', message, confirmText = 'Excluir', cancelText = 'Cancelar', onConfirm }) {
+      const dialog = document.createElement('dialog');
+      dialog.className = 'confirm-dialog';
+      dialog.setAttribute('aria-labelledby', 'confirmDialogTitle');
+      dialog.setAttribute('aria-describedby', 'confirmDialogMessage');
+      dialog.innerHTML = `
+        <div class="confirm-dialog__icon" aria-hidden="true">
+          <span class="material-symbols-outlined">delete</span>
+        </div>
+        <h2 class="confirm-dialog__title" id="confirmDialogTitle"></h2>
+        <p class="confirm-dialog__highlight"></p>
+        <p class="confirm-dialog__message" id="confirmDialogMessage"></p>
+        <p class="confirm-dialog__error" role="alert" hidden></p>
+        <div class="confirm-dialog__actions">
+          <button type="button" class="confirm-dialog__cancel"></button>
+          <button type="button" class="confirm-dialog__confirm"></button>
+        </div>`;
+
+      const titleEl = dialog.querySelector('.confirm-dialog__title');
+      const highlightEl = dialog.querySelector('.confirm-dialog__highlight');
+      const messageEl = dialog.querySelector('.confirm-dialog__message');
+      const errorEl = dialog.querySelector('.confirm-dialog__error');
+      const cancelButton = dialog.querySelector('.confirm-dialog__cancel');
+      const confirmButton = dialog.querySelector('.confirm-dialog__confirm');
+
+      titleEl.textContent = title;
+      highlightEl.textContent = highlight;
+      highlightEl.hidden = !highlight;
+      messageEl.textContent = message;
+      cancelButton.textContent = cancelText;
+      confirmButton.textContent = confirmText;
+
+      const isBusy = () => confirmButton.getAttribute('aria-busy') === 'true';
+
+      cancelButton.addEventListener('click', () => dialog.close());
+      dialog.addEventListener('cancel', event => { if (isBusy()) event.preventDefault(); });
+      dialog.addEventListener('click', event => { if (event.target === dialog && !isBusy()) dialog.close(); });
+      dialog.addEventListener('close', () => dialog.remove());
+
+      confirmButton.addEventListener('click', async () => {
+        errorEl.hidden = true;
+        setButtonLoading(confirmButton, true, 'Excluindo...');
+        cancelButton.disabled = true;
+        try {
+          await onConfirm();
+          dialog.close();
+        } catch (error) {
+          errorEl.textContent = error.message || 'Não foi possível concluir a exclusão.';
+          errorEl.hidden = false;
+        } finally {
+          if (dialog.isConnected) {
+            setButtonLoading(confirmButton, false);
+            cancelButton.disabled = false;
+          }
+        }
+      });
+
+      document.body.appendChild(dialog);
+      dialog.showModal();
+      cancelButton.focus();
     }
 
     function setSpeakerFeedback(message, isError = false) {
@@ -349,12 +435,69 @@
       }
     }
 
+        let eventStream = null;
+    let eventStreamOpenedOnce = false;
+    let eventRefreshPending = false;
+    let eventRefreshInFlight = false;
+
+    async function refreshManagedEventsSilently() {
+      const confirmOpen = document.querySelector('.confirm-dialog[open]');
+      if (currentView !== 'eventHistory') return;
+      if (eventEditDialog.open || confirmOpen) { eventRefreshPending = true; return; }
+      if (eventRefreshInFlight) return;
+      eventRefreshInFlight = true;
+      eventRefreshPending = false;
+      try {
+        const result = await requestManagementFlow('/api/managed-events', { action: 'list' });
+        const items = Array.isArray(result.items) ? result.items : [];
+        if (JSON.stringify(items) !== JSON.stringify(eventRecords)) {
+          eventRecords = items;
+          renderEventRows();
+          eventHistoryFeedback.textContent = `${eventRecords.length} evento(s) no histórico.`;
+          eventHistoryFeedback.classList.remove('is-error');
+        }
+      } catch {
+        // Falha silenciosa: o próximo aviso tenta de novo.
+      } finally {
+        eventRefreshInFlight = false;
+      }
+    }
+
+    function startEventAutoRefresh() {
+      stopEventAutoRefresh();
+      eventStreamOpenedOnce = false;
+      eventStream = new EventSource('/api/managed-events/stream');
+      eventStream.addEventListener('events-changed', refreshManagedEventsSilently);
+      eventStream.addEventListener('open', () => {
+        if (eventStreamOpenedOnce) refreshManagedEventsSilently();
+        eventStreamOpenedOnce = true;
+      });
+    }
+
+    function stopEventAutoRefresh() {
+      if (eventStream) eventStream.close();
+      eventStream = null;
+    }
+
+    eventEditDialog.addEventListener('close', () => {
+      if (eventRefreshPending) refreshManagedEventsSilently();
+    });
+
+    function toLocalInputValue(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value).slice(0, 16);
+  const pad = n => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+
     function openEventEdit(record) {
       document.getElementById('eventRecordId').value = record.id;
       document.getElementById('managedEventTitle').value = record.title || record.titulo || '';
       document.getElementById('managedEventDate').value = (record.dataApresentacao || '').slice(0, 10);
-      document.getElementById('managedEventStart').value = (record.start || record.dataHoraInicio || '').slice(0, 16);
-      document.getElementById('managedEventEnd').value = (record.end || record.dataHoraFim || '').slice(0, 16);
+      document.getElementById('managedEventStart').value = toLocalInputValue(record.start || record.dataHoraInicio);
+      document.getElementById('managedEventEnd').value = toLocalInputValue(record.end || record.dataHoraFim);
       document.getElementById('managedEventLocation').value = record.location || record.local || '';
       document.getElementById('managedEventFree').value = String(Boolean(record.indicacaoGratuidade));
       document.getElementById('managedEventFee').value = record.faixaDeValor ?? '';
@@ -394,32 +537,45 @@
         modalidade: document.getElementById('managedEventMode').value,
         outlookEventId: record.outlookEventId
       };
+
+      const saveButton = event.currentTarget.querySelector('button[type="submit"]');
+      const closeButton = document.getElementById('closeEventEdit');
+      setButtonLoading(saveButton, true);
+      if (closeButton) closeButton.disabled = true;
       try {
         await requestManagementFlow('/api/managed-events', { action: 'update', id, item });
         eventEditDialog.close();
         await loadManagedEvents();
         showToast('Evento atualizado no calendário e no histórico.', 'success');
       } catch (error) {
-        eventHistoryFeedback.textContent = error.message;
-        eventHistoryFeedback.classList.add('is-error');
+        showToast(error.message, 'error');
+      } finally {
+        setButtonLoading(saveButton, false);
+        if (closeButton) closeButton.disabled = false;
       }
     });
 
-    async function deleteManagedEvent(record) {
+    eventEditDialog.addEventListener('cancel', event => {
+      if (eventEditDialog.querySelector('[aria-busy="true"]')) event.preventDefault();
+    });
+
+    function deleteManagedEvent(record) {
       if (!canManageCalendarEvent(record)) return;
-      if (!window.confirm(`Excluir "${record.title || record.titulo || 'este evento'}" do calendário da Infra e do histórico?`)) return;
-      try {
-        await requestManagementFlow('/api/managed-events', {
-          action: 'delete',
-          id: String(record.id),
-          outlookEventId: record.outlookEventId
-        });
-        await loadManagedEvents();
-        showToast('Evento excluído do calendário e do histórico.', 'success');
-      } catch (error) {
-        eventHistoryFeedback.textContent = error.message;
-        eventHistoryFeedback.classList.add('is-error');
-      }
+      showConfirmDialog({
+        title: 'Excluir evento?',
+        highlight: record.title || record.titulo || 'Evento sem título',
+        message: 'O evento será removido do calendário da Infra e do histórico. Esta ação não pode ser desfeita.',
+        confirmText: 'Excluir evento',
+        onConfirm: async () => {
+          await requestManagementFlow('/api/managed-events', {
+            action: 'delete',
+            id: String(record.id),
+            outlookEventId: record.outlookEventId
+          });
+          await loadManagedEvents();
+          showToast('Evento excluído do calendário e do histórico.', 'success');
+        }
+      });
     }
 
     document.getElementById('refreshEvents').addEventListener('click', () => loadManagedEvents(true));
