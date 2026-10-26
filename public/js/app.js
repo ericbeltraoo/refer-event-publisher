@@ -323,7 +323,9 @@
       };
       const eventIds = Array.from(speakerEventsSelect.selectedOptions).map(option => option.value);
       const saveButton = document.getElementById('speakerSaveButton');
-      saveButton.disabled = true;
+      const cancelButton = document.getElementById('speakerCancelEdit');
+      setButtonLoading(saveButton, true);
+      cancelButton.disabled = true;
       try {
         const saved = await requestManagementFlow('/api/speakers', {
           action: id ? 'update' : 'create',
@@ -337,8 +339,8 @@
           speakerId,
           eventIds
         });
-        clearSpeakerForm();
         await Promise.all([loadSpeakers(), loadEventChoices()]);
+        clearSpeakerForm();
         setSpeakerFormFeedback('');
         showToast('Cadastro de palestrante salvo.', 'success');
       } catch (error) {
@@ -346,9 +348,15 @@
         setSpeakerFeedback(error.message, true);
         showToast(error.message, 'error');
       } finally {
-        saveButton.disabled = false;
+        setButtonLoading(saveButton, false);
+        saveButton.textContent = document.getElementById('speakerRecordId').value
+          ? 'Atualizar palestrante'
+          : 'Salvar palestrante';
+        cancelButton.disabled = false;
       }
     });
+
+
 
     function showSpeakerTab(tab) {
       const showForm = tab === 'form';
