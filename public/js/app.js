@@ -2,18 +2,50 @@
     const dashboardView = document.getElementById('dashboardView');
     const eventView = document.getElementById('eventView');
     const eventCategoryView = document.getElementById('eventCategoryView');
-    const speakersView = document.getElementById('speakersView');
     const eventHistoryView = document.getElementById('eventHistoryView');
+    const speakerCategoryView = document.getElementById('speakerCategoryView');
+    const speakerFormView = document.getElementById('speakerFormView');
+    const speakerHistoryView = document.getElementById('speakerHistoryView');
     let currentView = 'dashboard';
     let previousView = 'dashboard';
+    let pendingSpeakerEventIds = [];
+    let speakerEditRequested = false;
 
+    const VIEW_ROUTES = {
+      dashboard: '#/painel',
+      eventCategory: '#/eventos',
+      event: '#/eventos/criar',
+      eventHistory: '#/eventos/historico',
+      speakerCategory: '#/palestrantes',
+      speakerForm: '#/palestrantes/cadastro',
+      speakerHistory: '#/palestrantes/historico'
+    };
+    const NAV_GROUPS = {
+      eventCategory: ['event', 'eventHistory'],
+      speakerCategory: ['speakerForm', 'speakerHistory']
+    };
+
+    function viewFromHash() {
+      const match = Object.entries(VIEW_ROUTES).find(([, hash]) => hash === location.hash);
+      return match ? match[0] : 'dashboard';
+    }
+
+    // Troca o endereço (#/...); o evento hashchange abre a tela. Assim F5 e o botão Voltar funcionam.
     function showView(view) {
+      if (!VIEW_ROUTES[view]) return;
+      if (location.hash === VIEW_ROUTES[view]) renderView(view);
+      else location.hash = VIEW_ROUTES[view];
+    }
+
+    function renderView(view) {
       const views = {
         dashboard: dashboardView,
         event: eventView,
         eventCategory: eventCategoryView,
-        speakers: speakersView,
-        eventHistory: eventHistoryView
+        eventHistory: eventHistoryView,
+        speakerCategory: speakerCategoryView,
+        speakerForm: speakerFormView,
+        speakerHistory: speakerHistoryView
       };
       if (!views[view]) return;
       Object.entries(views).forEach(([name, element]) => {
@@ -21,17 +53,22 @@
       });
       document.body.classList.remove('development-page-active');
       document.querySelectorAll('.nav-item').forEach(item => {
-        const isActive = item.dataset.viewLink === view ||
-          (item.dataset.viewLink === 'eventCategory' && ['event', 'eventHistory'].includes(view));
+        const link = item.dataset.viewLink;
+        const isActive = link === view || (NAV_GROUPS[link] || []).includes(view);
         item.classList.toggle('is-active', isActive);
         if (isActive) item.setAttribute('aria-current', 'page');
         else item.removeAttribute('aria-current');
       });
       currentView = view;
       if (view === 'eventHistory') startEventAutoRefresh();
-     else stopEventAutoRefresh();
+      else stopEventAutoRefresh();
       views[view].querySelector('h1').focus();
-      if (view === 'speakers') {
+      if (view === 'speakerForm') {
+        if (!speakerEditRequested) clearSpeakerForm();
+        speakerEditRequested = false;
+        loadEventChoices(pendingSpeakerEventIds);
+        pendingSpeakerEventIds = [];
+      } else if (view === 'speakerHistory') {
         loadSpeakers();
         loadEventChoices();
       } else if (view === 'eventHistory') {
@@ -48,6 +85,7 @@
         showView(view);
       });
     });
+    window.addEventListener('hashchange', () => renderView(viewFromHash()));
     const speakerForm = document.getElementById('speakerForm');
     const speakerHistoryRows = document.getElementById('speakerHistoryRows');
     const speakerHistoryFeedback = document.getElementById('speakerHistoryFeedback');
@@ -199,8 +237,11 @@
         [
           speaker.nome || '',
           speaker.nomeProfissional || '',
+          speaker.areaDeAtuacao || '',
+          speaker.numeroTelefone || '',
           speaker.email || '',
-          speaker.instituicao || ''
+          speaker.instituicao || '',
+          speaker.localidade || ''
         ].forEach(value => {
           const cell = document.createElement('td');
           cell.textContent = value;
@@ -291,9 +332,12 @@
       document.getElementById('speakerLocation').value = speaker.localidade || '';
       document.getElementById('speakerSaveButton').textContent = 'Atualizar palestrante';
       document.getElementById('speakerCancelEdit').hidden = false;
-      showSpeakerTab('form');
-      loadEventChoices(speakerEventIds(speaker));
-      document.getElementById('speakerName').focus();
+      //showSpeakerTab('form');
+      //loadEventChoices(speakerEventIds(speaker));
+      //document.getElementById('speakerName').focus();
+      pendingSpeakerEventIds = speakerEventIds(speaker);
+      speakerEditRequested = true;
+      showView('speakerForm');
     }
 
     async function deleteSpeaker(speaker) {
@@ -343,6 +387,7 @@
         clearSpeakerForm();
         setSpeakerFormFeedback('');
         showToast('Cadastro de palestrante salvo.', 'success');
+        if (id) showView('speakerHistory');
       } catch (error) {
         setSpeakerFormFeedback(error.message, true);
         setSpeakerFeedback(error.message, true);
@@ -358,22 +403,10 @@
 
 
 
-    function showSpeakerTab(tab) {
-      const showForm = tab === 'form';
-      speakerFormPanel.hidden = !showForm;
-      speakerHistoryPanel.hidden = showForm;
-      document.querySelectorAll('[data-speaker-tab]').forEach(button => {
-        const active = button.dataset.speakerTab === tab;
-        button.classList.toggle('is-active', active);
-        button.setAttribute('aria-selected', String(active));
-      });
-      if (!showForm) loadSpeakers();
-    }
-
-    document.querySelectorAll('[data-speaker-tab]').forEach(button => {
-      button.addEventListener('click', () => showSpeakerTab(button.dataset.speakerTab));
+    document.getElementById('speakerCancelEdit').addEventListener('click', () => {
+      clearSpeakerForm();
+      showView('speakerHistory');
     });
-    document.getElementById('speakerCancelEdit').addEventListener('click', clearSpeakerForm);
     document.getElementById('refreshSpeakers').addEventListener('click', loadSpeakers);
 
     function eventDateTime(event) {
@@ -855,7 +888,7 @@
       eventPageTitle.textContent = stepCopy[0];
       eventPageDescription.textContent = stepCopy[1];
       eventBackButton.dataset.viewLink = step === 1 ? 'eventCategory' : 'event';
-      eventBackButton.querySelector('#eventBackLabel').textContent = step === 1 ? 'Voltar aos eventos' : 'Voltar ao evento';
+      eventBackButton.querySelector('#eventBackLabel').textContent = step === 1 ? 'Voltar para Cadastro Eventos' : 'Voltar ao evento';
       eventBackButton.querySelector('.material-symbols-outlined').textContent = 'arrow_back';
       document.getElementById('eventSummaryNote').textContent = [
         'As informações de publicação serão definidas na próxima etapa.',
@@ -1885,3 +1918,5 @@
       }
       showCalendarConflictDialog(calendarConflicts);
     }
+
+    renderView(viewFromHash());
