@@ -5,7 +5,7 @@ WORKDIR /app
 ENV HOST=0.0.0.0 \
     PORT=3000
 
-COPY --chown=node:node server.js ./
+COPY --chown=node:node server.js events-watcher.js ./
 COPY --chown=node:node public ./public
 
 USER node
