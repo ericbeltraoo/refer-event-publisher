@@ -4,6 +4,18 @@ services:
     environment:
       HOST: "0.0.0.0"
       PORT: "3000"
+      NODE_ENV: production
+      AUTH_MODE: entra
+      ENTRA_TENANT_ID: ${ENTRA_TENANT_ID:?Configure ENTRA_TENANT_ID}
+      ENTRA_CLIENT_ID: ${ENTRA_CLIENT_ID:?Configure ENTRA_CLIENT_ID}
+      ENTRA_CLIENT_SECRET: ${ENTRA_CLIENT_SECRET:?Configure ENTRA_CLIENT_SECRET}
+      ENTRA_REDIRECT_URI: ${ENTRA_REDIRECT_URI:?Configure ENTRA_REDIRECT_URI HTTPS}
+      AUTH_EMAIL_DOMAIN: refer.com.br
+      AUTH_ALLOWED_USERS: ${AUTH_ALLOWED_USERS:-}
+      AUDIT_ADMIN_EMAILS: ${AUDIT_ADMIN_EMAILS:-}
+      AUDIT_LOG_DIR: /app/data/audit
+      EVENT_SPEAKERS_ENABLED: ${EVENT_SPEAKERS_ENABLED:-false}
+      SPEAKER_METADATA_ENABLED: ${SPEAKER_METADATA_ENABLED:-false}
       TEAMS_FLOW_URL: ${TEAMS_FLOW_URL:?Configure TEAMS_FLOW_URL nas variaveis da Stack}
       MANAGEMENT_FLOW_URL: ${MANAGEMENT_FLOW_URL:-}
       SPEAKERS_FLOW_URL: ${SPEAKERS_FLOW_URL:-}
@@ -14,5 +26,10 @@ services:
       WORDPRESS_APP_PASSWORD: ${WORDPRESS_APP_PASSWORD:?Configure WORDPRESS_APP_PASSWORD nas variaveis da Stack}
       TEAMS_ATTACHMENTS_ENABLED: ${TEAMS_ATTACHMENTS_ENABLED:-false}
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - refer-audit:/app/data/audit
     restart: unless-stopped
+
+volumes:
+  refer-audit:

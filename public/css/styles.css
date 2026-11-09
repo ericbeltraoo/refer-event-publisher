@@ -2221,3 +2221,55 @@ button.is-loading:disabled {
 .confirm-dialog__title::before {
   display: none;
 }
+/* Cadastro integrado de palestrantes e trilha de auditoria. */
+.event-speakers-section,.speaker-extra-fields { min-width:0; margin:18px 0; padding:20px; border:1px solid #dce5ef; border-radius:12px; background:#f8fbff; }
+.event-speakers-section legend,.speaker-extra-fields legend { padding:0 8px; font-weight:700; color:#16436b; }
+.event-speakers-section label,.audit-filters label,.participation-fields label { display:flex;flex-direction:column;gap:7px;font-size:13px;font-weight:600;color:#334b63; }
+.event-speakers-section input,.event-speakers-section select,.audit-filters input,.audit-filters select { width:100%;padding:10px 12px;border:1px solid #dce5ef;border-radius:7px;background:white;color:#23394f;box-sizing:border-box; }
+.event-speakers-section p { font-size:13px;line-height:1.6;color:#526779; }
+.speaker-picker { display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;margin:16px 0; }
+.speaker-picker label { flex:1;min-width:200px; }
+.selected-speaker-card { display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:16px;background:white;border:1px solid #dce5ef;border-radius:9px;margin-top:12px; }
+.participation-fields { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;width:100%; }
+.validation-check { display:flex!important;flex-direction:row!important;align-items:center;gap:10px; }
+.validation-check input { width:auto!important; }
+.dialog-heading { display:flex;align-items:center;justify-content:space-between;gap:16px; }
+#speakerQuickDialog { width:min(900px,94vw);max-height:90vh;overflow:auto; }
+#speakerQuickDialog .management-panel { margin:0;padding:16px;box-shadow:none; }
+.audit-dialog { width:min(1250px,94vw);max-height:90vh;overflow:auto; }
+.audit-filters { display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap; }
+.audit-filters label { flex:1;min-width:130px; }
+.speaker-review { margin-top:18px;border-top:1px solid #dce5ef;padding-top:12px; }
+.session-label { max-width:240px;overflow:hidden;text-overflow:ellipsis;font-size:12px; }
+#openAuditLogs[hidden],#eventSpeakerOptions[hidden],#speakerEventsField[hidden] {display:none!important;}
+@media(max-width:700px) { .participation-fields {grid-template-columns:1fr;} .speaker-picker {align-items:stretch;flex-direction:column;} }
+.audit-page {max-width:1600px;}
+.audit-heading,.audit-heading-actions {display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;}
+.audit-heading-actions a {text-decoration:none;}
+.audit-heading-actions a[aria-disabled="true"] {opacity:.5;pointer-events:none;}
+.audit-summary {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin:24px 0;}
+.audit-summary>div {background:#fff;border:1px solid #e0e8f1;border-radius:12px;padding:20px;box-shadow:0 3px 12px #173f6510;}
+.audit-summary span {display:block;color:#607387;font-size:13px;line-height:1.5;}
+.audit-summary strong {display:block;margin-top:8px;font-size:30px;color:#174c78;}
+.audit-page-filters {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;}
+.audit-page-filters label {display:flex;flex-direction:column;gap:6px;}
+.audit-page-filters input {width:100%;padding:10px 12px;border:1px solid #d8e0ea;border-radius:6px;box-sizing:border-box;}
+.audit-filter-actions {grid-column:1/-1;display:flex;gap:12px;justify-content:flex-end;}
+.audit-help {font-size:12px;color:#62778a;line-height:1.6;}
+.audit-page .management-panel {margin-bottom:20px;}
+.audit-pagination {display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:20px;}
+.audit-pagination button:disabled {opacity:.45;cursor:not-allowed;}
+.audit-empty {text-align:center;color:#66798a;padding:24px;}
+.audit-badge {display:inline-block;white-space:nowrap;padding:5px 9px;border-radius:30px;font-size:12px;font-weight:600;}
+.audit-badge--success {color:#11614b;background:#e5f6ef;}
+.audit-badge--failed {color:#992e35;background:#fcebed;}
+.audit-badge--partial,.audit-badge--unknown {color:#805b10;background:#fff4d5;}
+.audit-badge--started {color:#245a88;background:#eaf2fc;}
+.audit-record-details summary {cursor:pointer;white-space:nowrap;color:#1c6297;font-weight:600;}
+.audit-record-details dl {min-width:220px;max-width:330px;overflow-wrap:anywhere;margin-top:12px;}
+.audit-record-details dt {font-weight:600;margin-top:10px;font-size:12px;}
+.audit-record-details dd {margin:3px 0;font-size:12px;}
+#auditView[hidden] {display:none!important;}
+@media(max-width:1000px){.audit-summary,.audit-page-filters{grid-template-columns:repeat(2,minmax(0,1fr));}}
+@media(max-width:600px){.audit-summary,.audit-page-filters{grid-template-columns:1fr;}.audit-pagination{flex-wrap:wrap;}}
+.audit-filter-actions .wizard-button {width:auto;min-width:125px;}

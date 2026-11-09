@@ -6,7 +6,7 @@
   <!-- Ícones Material Symbols usados pelas ferramentas do editor -->
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
 
-  <link rel="stylesheet" href="/css/styles.css?v=routes-v1">
+  <link rel="stylesheet" href="/css/styles.css?v=audit-page-v2">
 </head>
 <body>
 
@@ -30,6 +30,7 @@
           <span class="material-symbols-outlined" aria-hidden="true">record_voice_over</span>
           <span>Cadastro Palestrantes</span>
         </button>
+        <button type="button" class="nav-item" id="openAuditLogs" data-view-link="audit" hidden><span class="material-symbols-outlined" aria-hidden="true">receipt_long</span><span>Logs do sistema</span></button>
       </nav>
       <div class="sidebar-footer">
         <span class="material-symbols-outlined" aria-hidden="true">account_balance</span>
@@ -144,11 +145,23 @@
               <label>Nome <span class="req">*</span><input id="speakerName" name="nome" type="text" required maxlength="255"></label>
               <label>Nome profissional<input id="speakerProfessionalName" name="nomeProfissional" type="text" maxlength="255"></label>
               <label>Área de atuação<input id="speakerArea" name="areaDeAtuacao" type="text" maxlength="255"></label>
-              <label>Telefone<input id="speakerPhone" name="numeroTelefone" type="text" maxlength="100"></label>
+              <label>Telefone profissional<input id="speakerPhone" name="numeroTelefone" type="text" maxlength="100"></label>
               <label>E-mail profissional<input id="speakerEmail" name="email" type="email" maxlength="255"></label>
               <label>Instituição<input id="speakerInstitution" name="instituicao" type="text" maxlength="255"></label>
               <label>Localidade<input id="speakerLocation" name="localidade" type="text" maxlength="255"></label>
-              <label class="management-field--wide">Eventos/apresentações
+              <fieldset class="speaker-extra-fields management-field--wide">
+  <legend>Origem e validação do cadastro</legend>
+  <p id="speakerMetadataNotice" class="management-feedback">Novos campos dependem da atualização do fluxo de gerenciamento.</p>
+  <div class="management-form">
+    <label>Fonte do contato<select id="speakerSource"><option value="">Selecione</option><option value="INDICACAO_INTERNA">Indicação interna</option><option value="SITE_PROFISSIONAL">Site profissional</option><option value="EVENTO_ANTERIOR">Evento anterior</option><option value="CONTATO_DIRETO">Contato direto</option></select></label>
+    <label>Área responsável pelo cadastro<select id="speakerOwnerArea"><option value="">Selecione</option><option value="GABIN_COMUNICACAO">GABIN/Comunicação</option><option value="GERIC">GERIC</option><option value="GEPES">GEPES</option></select></label>
+    <label>Situação<select id="speakerStatus"><option value="ATIVO">Ativo</option><option value="REVISAO_PENDENTE">Revisão pendente</option><option value="ARQUIVADO">Arquivado</option></select></label>
+    <label class="validation-check"><input type="checkbox" id="speakerValidateNow"> Confirmo que revisei e validei os dados de contato</label>
+  </div>
+  <p id="speakerValidationDates" class="management-feedback">Data de inclusão e última validação serão registradas pelo servidor/SharePoint.</p>
+  <p class="management-feedback">Revise os cadastros anualmente. Arquivamento e eliminação devem seguir a tabela de temporalidade da organização.</p>
+</fieldset>
+<label class="management-field--wide" id="speakerEventsField">Eventos/apresentações
                 <select id="speakerEvents" name="eventIds" multiple size="5" aria-describedby="speakerEventsHelp"></select>
                 <small id="speakerEventsHelp">Use Ctrl (Windows) ou Command (Mac) para selecionar mais de um evento.</small>
               </label>
@@ -395,7 +408,19 @@
                     <span class="description-text" id="participantsHelp">Adicione um ou mais e-mails. Você também pode colar uma lista separada por ponto e vírgula.</span>
                   </div>
                   <div class="form-group event-field--wide">
-                    <div class="toggle-wrapper event-meeting-toggle">
+                    <fieldset class="event-speakers-section">
+  <legend>Palestrantes do evento</legend>
+  <label>Este evento possui palestrantes?<select id="eventHasSpeakers"><option value="no">Não</option><option value="yes">Sim</option></select></label>
+  <div id="eventSpeakerOptions" hidden>
+    <p>Selecione pessoas já cadastradas ou cadastre uma nova sem sair do evento. O vínculo será concluído ao criar o evento.</p>
+    <p id="eventSpeakersFeedback" class="management-feedback" aria-live="polite"></p>
+    <label>Buscar palestrantes<input id="speakerSearch" type="search" placeholder="Nome ou área de atuação" maxlength="100"></label>
+    <div class="speaker-picker"><label>Palestrante<select id="eventSpeakerPicker"><option value="">Selecione</option></select></label><button type="button" id="addEventSpeaker" class="wizard-button">Adicionar</button><button type="button" id="newEventSpeaker" class="wizard-button">+ Cadastrar novo</button></div>
+    <div id="selectedEventSpeakers"></div>
+    <p>Os e-mails dos palestrantes não são adicionados automaticamente aos convidados.</p>
+  </div>
+</fieldset>
+<div class="toggle-wrapper event-meeting-toggle">
                       <span class="material-symbols-outlined" aria-hidden="true">videocam</span>
                       <label class="switch">
                         <input type="checkbox" id="isTeamsMeeting">
@@ -582,6 +607,20 @@
             </aside>
           </div>
         </section>
+<section id="auditView" class="management-view audit-page" aria-labelledby="auditTitle" hidden>
+ <div class="page-heading audit-heading"><div><button type="button" class="back-to-dashboard" data-view-link="dashboard">← Voltar ao painel</button><h1 id="auditTitle" tabindex="-1">Logs do sistema</h1><p>Trilha de auditoria das operações realizadas pela aplicação.</p></div><div class="audit-heading-actions"><button id="refreshAudit" type="button" class="wizard-button">Atualizar</button><a id="exportAudit" class="wizard-button" href="/api/audit/export" download>Exportar consulta completa</a></div></div>
+ <div class="audit-summary" aria-label="Resumo da consulta"><div><span>Registros encontrados</span><strong id="auditTotal">—</strong></div><div><span>Concluídos</span><strong id="auditSuccess">—</strong></div><div><span>Falhas ou resultados parciais</span><strong id="auditProblems">—</strong></div><div><span>Iniciados ou indeterminados</span><strong id="auditPending">—</strong></div></div>
+ <section class="management-panel" aria-labelledby="auditFiltersTitle"><h2 id="auditFiltersTitle">Filtrar auditoria</h2><form id="auditFilter" class="audit-page-filters">
+ <label>De (UTC)<input name="from" type="date"></label><label>Até (UTC)<input name="to" type="date"></label><label>Usuário<input name="user" type="search" placeholder="E-mail corporativo" maxlength="150"></label>
+ <label>Categoria<select name="resource"><option value="">Todas</option><option value="/api/speakers">Palestrantes</option><option value="/api/managed-events">Eventos</option><option value="/api/participations">Participações</option><option value="/api/teams">Calendário/Teams</option><option value="/api/wordpress/events">Publicação no site</option></select></label>
+ <label>Operação<select name="action"><option value="">Todas</option><option value="create">Inclusão</option><option value="update">Alteração</option><option value="delete">Exclusão</option><option value="sync">Sincronização</option><option value="replaceForSpeaker">Atualização de participações</option></select></label>
+ <label>Resultado<select name="outcome"><option value="">Todos</option><option value="started">Iniciada</option><option value="success">Concluída</option><option value="failed">Falhou</option><option value="partial">Parcial</option><option value="unknown">Indeterminada</option></select></label>
+ <label>ID do registro<input name="recordId" type="search" maxlength="100"></label><label>Identificador de correlação<input name="requestId" type="search" maxlength="150"></label>
+ <div class="audit-filter-actions"><button type="submit" class="wizard-button wizard-button--next">Aplicar filtros</button><button type="button" id="clearAuditFilters" class="wizard-button">Limpar filtros</button></div></form><p class="audit-help">Sem datas, a consulta inclui todo o histórico disponível. Os horários são exibidos no fuso do navegador. Início e resultado de uma operação compartilham o identificador de correlação.</p></section>
+ <section class="management-panel" aria-labelledby="auditResultsTitle"><div class="management-panel-heading"><h2 id="auditResultsTitle">Registros de auditoria</h2><label>Por página<select id="auditPageSize"><option value="25">25</option><option value="50" selected>50</option><option value="100">100</option></select></label></div><p id="auditFeedback" role="status" aria-live="polite"></p>
+ <div class="management-table-wrap"><table class="management-table audit-table"><thead><tr><th>Data e hora</th><th>Usuário</th><th>Categoria</th><th>Operação</th><th>ID do registro</th><th>Resultado</th><th>Detalhes</th></tr></thead><tbody id="auditRows"></tbody></table></div>
+ <div class="audit-pagination"><button type="button" id="auditPrevious" class="wizard-button" disabled>← Anterior</button><span id="auditPageInfo">Página 1</span><button type="button" id="auditNext" class="wizard-button" disabled>Próxima →</button></div>
+ <p class="audit-help">A auditoria cobre operações que passaram por este servidor. Alterações feitas diretamente no Microsoft 365 precisam da auditoria própria desses serviços. Os registros não incluem senhas, anexos ou valores dos dados de contato.</p></section></section>
       </main>
     </div>
   </div>
@@ -612,6 +651,10 @@
   </dialog>
 
   <div class="toast-stack" id="toastStack" aria-live="polite" aria-atomic="false"></div>
-  <script src="/js/app.js?v=routes-v1" defer></script>
+  <dialog id="speakerQuickDialog" class="management-dialog" aria-labelledby="speakerQuickTitle"><div class="dialog-heading"><h2 id="speakerQuickTitle">Cadastrar palestrante para este evento</h2><button type="button" id="closeSpeakerQuick" class="wizard-button">Fechar</button></div><p>Ao salvar, o palestrante ficará no cadastro. Se você cancelar o evento, o cadastro continuará disponível.</p><div id="speakerQuickBody"></div></dialog>
+
+  <script src="/js/app.js?v=audit-page-v2" defer></script>
+  <script src="/js/registration.js?v=audit-page-v2" defer></script>
+  <script src="/js/audit-page.js?v=audit-page-v2" defer></script>
 </body>
 </html>

@@ -13,6 +13,7 @@
 
     const VIEW_ROUTES = {
       dashboard: '#/painel',
+      audit: '#/logs',
       eventCategory: '#/eventos',
       event: '#/eventos/criar',
       eventHistory: '#/eventos/historico',
@@ -40,6 +41,7 @@
     function renderView(view) {
       const views = {
         dashboard: dashboardView,
+        audit: document.getElementById('auditView'),
         event: eventView,
         eventCategory: eventCategoryView,
         eventHistory: eventHistoryView,
@@ -63,6 +65,7 @@
       if (view === 'eventHistory') startEventAutoRefresh();
       else stopEventAutoRefresh();
       views[view].querySelector('h1').focus();
+      if (view === 'audit') window.auditPage?.open();
       if (view === 'speakerForm') {
         if (!speakerEditRequested) clearSpeakerForm();
         speakerEditRequested = false;
@@ -315,6 +318,7 @@
 
     function clearSpeakerForm() {
       speakerForm.reset();
+      window.speakerExtras?.reset();
       document.getElementById('speakerRecordId').value = '';
       document.getElementById('speakerSaveButton').textContent = 'Salvar palestrante';
       document.getElementById('speakerCancelEdit').hidden = true;
@@ -330,6 +334,7 @@
       document.getElementById('speakerEmail').value = speaker.email || '';
       document.getElementById('speakerInstitution').value = speaker.instituicao || '';
       document.getElementById('speakerLocation').value = speaker.localidade || '';
+      window.speakerExtras?.hydrate(speaker);
       document.getElementById('speakerSaveButton').textContent = 'Atualizar palestrante';
       document.getElementById('speakerCancelEdit').hidden = false;
       //showSpeakerTab('form');
@@ -355,6 +360,7 @@
     speakerForm.addEventListener('submit', async event => {
       event.preventDefault();
       if (!speakerForm.reportValidity()) return;
+      if (window.speakerExtras && !window.speakerExtras.validate()) return;
       const id = fieldValue('speakerRecordId');
       const item = {
         nome: fieldValue('speakerName'),
@@ -363,7 +369,8 @@
         numeroTelefone: fieldValue('speakerPhone'),
         email: fieldValue('speakerEmail'),
         instituicao: fieldValue('speakerInstitution'),
-        localidade: fieldValue('speakerLocation')
+        localidade: fieldValue('speakerLocation'),
+        ...(window.speakerExtras?.serialize() || {})
       };
       const eventIds = Array.from(speakerEventsSelect.selectedOptions).map(option => option.value);
       const saveButton = document.getElementById('speakerSaveButton');
@@ -378,6 +385,11 @@
         });
         const speakerId = String(saved.id || id || saved.item?.id || '');
         if (!speakerId) throw new Error('O fluxo salvou o palestrante, mas não retornou o ID necessário para vincular eventos.');
+        if (window.speakerDialogContext?.active) {
+          window.speakerDialogContext.saved({id:speakerId,...item});
+          clearSpeakerForm();
+          return;
+        }
         await requestManagementFlow('/api/participations', {
           action: 'replaceForSpeaker',
           speakerId,
@@ -1709,6 +1721,12 @@
     }
 
     async function publicarEvento(forcarEnvio = false, publicarNoWordPress = true) {
+      let selectedSpeakers=[];
+      try { selectedSpeakers=window.eventSpeakers?.serialize() || []; }
+      catch(error) {showToast(error.message,'error');return;}
+      if(selectedSpeakers.length && !window.registrationCapabilities?.eventSpeakers) {
+        showToast('O fluxo precisa ser atualizado para criar eventos com palestrantes. Nenhum evento foi enviado.','error');return;
+      }
       const btn = document.getElementById('btnEnviar');
       const calendarBtn = document.getElementById('btnEnviarCalendario');
       const alertaDuplicado = document.getElementById('alertaDuplicado');
@@ -1813,6 +1831,7 @@
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            speakerParticipations: selectedSpeakers,
             titulo: titulo,
             descricao: descricaoHtml,
             descricaoContentType: 'HTML',
@@ -1849,7 +1868,8 @@
             statusTeams.innerText = "Teams/Calendário: ✅ Evento criado com sucesso!";
           }
         } else {
-          statusTeams.innerText = `Teams/Calendário: ❌ Erro HTTP ${respTeams.status}`;
+          const failure = await respTeams.json().catch(() => ({}));
+          statusTeams.innerText = failure.message || `Teams/Calendário: ❌ Erro HTTP ${respTeams.status}`;
           showToast(`Não foi possível criar o evento no Teams/Calendário (HTTP ${respTeams.status}).`, 'error');
         }
       } catch (e) {
@@ -1857,11 +1877,11 @@
         showToast('Não foi possível conectar ao Teams/Calendário.', 'error');
       }
 
-      if (anexosTeams.length && !teamsSucceeded) {
+      if (!teamsSucceeded) {
         statusWP.innerText = publicarNoWordPress
-          ? "WordPress: publicação cancelada porque o Teams/Calendário não confirmou o envio dos anexos."
+          ? "WordPress: publicação interrompida porque a criação do evento não foi confirmada."
           : "WordPress: não publicado (modo somente calendário).";
-        showToast('A publicação foi interrompida porque o envio dos anexos ao Teams/Calendário não foi confirmado.', 'error');
+        showToast('A divulgação foi interrompida. Verifique o resultado do calendário e consulte o histórico antes de reenviar.', 'error');
         setPublishButtonsDisabled(false);
         return;
       }

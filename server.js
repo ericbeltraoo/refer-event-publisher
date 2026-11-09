@@ -2,6 +2,9 @@ const fs = require('node:fs');
 const http = require('node:http');
 const path = require('node:path');
 const { createEventsWatcher } = require('./events-watcher');
+const {createAuth} = require('./auth');
+const {createAudit} = require('./audit');
+const crypto = require('node:crypto');
 
 const ROOT_DIR = __dirname;
 const PUBLIC_DIR = path.join(ROOT_DIR, 'public');
@@ -52,7 +55,7 @@ async function readRequestBody(request) {
   return Buffer.concat(chunks);
 }
 
-async function proxyRequest(response, targetUrl, options) {
+async function proxyRequest(response, targetUrl, options, tracking) {
   try {
     const upstream = await fetch(targetUrl, {
       ...options,
@@ -65,12 +68,22 @@ async function proxyRequest(response, targetUrl, options) {
       return;
     }
 
+    if (tracking) {
+      let result; try { result = JSON.parse(body.toString('utf8')); } catch {}
+      const linked = !tracking.expectSpeakers || result?.participationsSaved === true;
+      tracking.audit.write({...tracking.entry,recordId:tracking.entry.recordId || result?.eventId || result?.id,
+        status:upstream.status,outcome:upstream.ok && linked ? 'success' : upstream.ok ? 'partial' : 'failed'});
+      if(upstream.ok && !linked) {
+        sendJson(response,502,{message:'O calendário pode ter sido criado, mas o fluxo não confirmou os vínculos. Consulte o histórico antes de reenviar.',partial:true,requestId:tracking.entry.requestId});return;
+      }
+    }
     response.writeHead(upstream.status, {
       'Content-Type': upstream.headers.get('content-type') || 'application/json; charset=utf-8',
       'Cache-Control': 'no-store'
     });
     response.end(body);
   } catch (error) {
+    if(tracking) { try {tracking.audit.write({...tracking.entry,outcome:'unknown',status:502});} catch {} }
     const message = error.name === 'TimeoutError'
       ? 'O serviço externo demorou demais para responder.'
       : 'Não foi possível conectar ao serviço externo.';
@@ -81,6 +94,27 @@ async function proxyRequest(response, targetUrl, options) {
 function createServer(options = {}) {
   const config = options.config || process.env;
   const publicDir = options.publicDir || PUBLIC_DIR;
+  const auth = createAuth(config, options.authClient);
+  const audit = createAudit(config);
+  if(config.NODE_ENV === 'production' && !audit.enabled) throw new Error('Configure AUDIT_LOG_DIR em produção.');
+  async function forward(request,response,url,proxyOptions) {
+    const resource = new URL(request.url,'http://localhost').pathname;
+    let payload={}; try {payload=JSON.parse(String(proxyOptions.body || '{}'));}catch{}
+    const action = payload.action || (request.method === 'POST' ? 'create' : 'list');
+    const mutation = !['list'].includes(action) && request.method === 'POST';
+    const requestId=crypto.randomUUID();
+    const entry={requestId,actor:request.actor,resource,action,
+      recordId:payload.id,fields:Object.keys(payload.item || {}),outcome:'started',status:0};
+    const metadata={actorId:request.actor.id,actorEmail:request.actor.email,authenticated:request.actor.authenticated,requestId};
+    if(mutation && resource !== '/api/wordpress/events') {
+      proxyOptions.body=JSON.stringify({...payload,auditContext:metadata});
+    }
+    if(mutation) {
+      try {audit.write(entry);}catch {sendJson(response,503,{message:'Não foi possível iniciar o registro de auditoria. Nenhuma operação foi enviada.'});return;}
+    }
+    response.setHeader('X-Request-Id',requestId);
+    await proxyRequest(response,url,proxyOptions,mutation?{audit,entry,expectSpeakers:resource==='/api/teams' && payload.speakerParticipations?.length>0}:null);
+  }
 
   // Criado aqui (e não no topo do arquivo) porque o .env só é carregado em startServer().
   // Mesma regra de escolha do fluxo usada na rota /api/managed-events abaixo.
@@ -107,6 +141,20 @@ function createServer(options = {}) {
     } catch {
       sendJson(response, 400, { message: 'Endereço da requisição inválido.' });
       return;
+    }
+
+    if(requestUrl.pathname === '/healthz') {sendJson(response,200,{status:'ok'});return;}
+    try {if(await auth.handle(request,response,requestUrl)) return;}
+    catch {sendJson(response,503,{message:'Não foi possível iniciar a autenticação. Tente novamente.'});return;}
+    if(['/api/audit','/api/audit/export'].includes(requestUrl.pathname)) {
+      if(request.method !== 'GET'){sendJson(response,405,{message:'Método não permitido.'});return;}
+      if(!request.actor.canViewLogs){sendJson(response,403,{message:'Acesso aos logs restrito aos responsáveis autorizados.'});return;}
+      try {
+        const filters=Object.fromEntries(requestUrl.searchParams);
+        if(requestUrl.pathname.endsWith('/export')) await audit.exportCsv(filters,response);
+        else sendJson(response,200,await audit.query(filters));
+      }
+      catch(error){if(response.headersSent)response.destroy();else sendJson(response,error.statusCode || 500,{message:error.statusCode?error.message:'Não foi possível consultar a auditoria.'});}return;
     }
 
     // Aviso em tempo real: o navegador abre esta conexão e só recebe algo quando o histórico muda.
@@ -149,6 +197,22 @@ function createServer(options = {}) {
         return;
       }
 
+      if(!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+        sendJson(response,400,{message:'Informe um objeto JSON válido.'});return;
+      }
+      if(payload.speakerParticipations !== undefined) {
+        if(!Array.isArray(payload.speakerParticipations) || payload.speakerParticipations.length>20 ||
+          payload.speakerParticipations.some(item=>!item || typeof item.speakerId !== 'string' || !item.speakerId.trim() ||
+            !['PRESENCIAL','ONLINE','HIBRIDA'].includes(item.modalidade) || !['GRATUITA','REMUNERADA','A_COMBINAR'].includes(item.remuneracao) ||
+            (item.remuneracao==='REMUNERADA' && !['ATE_500','DE_501_A_1000','DE_1001_A_3000','ACIMA_3000'].includes(item.faixaDeValor))) ||
+          new Set(payload.speakerParticipations.map(item=>item.speakerId)).size !== payload.speakerParticipations.length) {
+          sendJson(response,400,{message:'Informe uma lista válida de palestrantes e condições de participação.'});return;
+        }
+        if(payload.speakerParticipations.length && config.EVENT_SPEAKERS_ENABLED !== 'true') {
+          sendJson(response,503,{message:'A seleção de palestrantes está pronta, mas o fluxo de criação precisa ser atualizado antes do envio com vínculos.'});return;
+        }
+      }
+
       if (Array.isArray(payload.attachments) && payload.attachments.length > 0 && config.TEAMS_ATTACHMENTS_ENABLED !== 'true') {
         sendJson(response, 503, {
           message: 'O fluxo do Teams/Calendário ainda não está configurado para processar documentos. Configure o salvamento no SharePoint e os links no evento antes de habilitar TEAMS_ATTACHMENTS_ENABLED.'
@@ -156,7 +220,7 @@ function createServer(options = {}) {
         return;
       }
 
-      await proxyRequest(response, config.TEAMS_FLOW_URL, {
+      await forward(request, response, config.TEAMS_FLOW_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body
@@ -236,10 +300,33 @@ function createServer(options = {}) {
         return;
       }
 
+      if(requestUrl.pathname === '/api/speakers' && ['create','update'].includes(payload.action)) {
+        const allowed=['nome','nomeProfissional','areaDeAtuacao','numeroTelefone','email','instituicao','localidade',
+          'fonteDoContato','areaResponsavel','situacaoCadastro','validarAgora'];
+        if(Object.keys(payload.item).some(key=>!allowed.includes(key)) ||
+          Object.entries(payload.item).some(([key,value])=>key!=='validarAgora' && (typeof value!=='string'||value.length>255)) ||
+          (payload.item.validarAgora !== undefined && typeof payload.item.validarAgora !== 'boolean')) {
+          sendJson(response,400,{message:'Campos de palestrante inválidos ou extensos.'});return;
+        }
+        if(payload.item.areaResponsavel && !['GABIN_COMUNICACAO','GERIC','GEPES'].includes(payload.item.areaResponsavel) ||
+           payload.item.situacaoCadastro && !['ATIVO','REVISAO_PENDENTE','ARQUIVADO'].includes(payload.item.situacaoCadastro)) {
+          sendJson(response,400,{message:'Área responsável ou situação inválida.'});return;
+        }
+        const enriched=Object.keys(payload.item).some(key=>['fonteDoContato','areaResponsavel','situacaoCadastro','validarAgora'].includes(key));
+        if(enriched && config.SPEAKER_METADATA_ENABLED !== 'true') {
+          sendJson(response,503,{message:'Atualize o fluxo e habilite SPEAKER_METADATA_ENABLED para salvar origem e validação.'});return;
+        }
+        if(config.SPEAKER_METADATA_ENABLED === 'true' && (!payload.item.areaResponsavel || !payload.item.fonteDoContato)) {
+          sendJson(response,400,{message:'Informe a fonte do contato e a área responsável pelo cadastro.'});return;
+        }
+        // Datas de inclusão são geradas pelo SharePoint; validação somente com confirmação explícita.
+        if(payload.item.validarAgora) payload.item.dataValidacao=new Date().toISOString();
+      }
+
       const forwardedBody = unifiedManagementFlow
         ? JSON.stringify({ ...payload, resource: managementFlow.resource })
-        : body;
-      await proxyRequest(response, flowUrl, {
+        : JSON.stringify(payload);
+      await forward(request, response, flowUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: forwardedBody
@@ -301,7 +388,7 @@ function createServer(options = {}) {
         proxyOptions.body = body;
       }
 
-      await proxyRequest(response, targetUrl, proxyOptions);
+      await forward(request, response, targetUrl, proxyOptions);
       return;
     }
 

@@ -202,7 +202,10 @@ test('forwards speaker management requests to the configured Power Automate flow
     body: JSON.stringify(payload)
   });
   assert.equal(response.status, 200);
-  assert.deepEqual(forwardedPayload, payload);
+  assert.equal(forwardedPayload.auditContext.authenticated, false);
+  assert.ok(forwardedPayload.auditContext.requestId);
+  const {auditContext,...businessPayload}=forwardedPayload;
+  assert.deepEqual(businessPayload, payload);
   assert.deepEqual(await response.json(), { id: '42' });
 });
 
@@ -250,7 +253,9 @@ test('forwards Teams requests through the server without requiring browser crede
     })
   });
   assert.equal(response.status, 202);
-  assert.deepEqual(forwardedPayload, {
+  assert.equal(forwardedPayload.auditContext.authenticated, false);
+  const {auditContext,...businessPayload}=forwardedPayload;
+  assert.deepEqual(businessPayload, {
     titulo: 'Evento de teste local',
     descricaoContentType: 'HTML',
     attachments: [{

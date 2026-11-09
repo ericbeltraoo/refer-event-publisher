@@ -9,5 +9,8 @@
   "scripts": {
     "start": "node server.js",
     "test": "node --test"
+  },
+  "dependencies": {
+    "@azure/msal-node": "^7.2.1"
   }
 }
